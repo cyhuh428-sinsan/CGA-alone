@@ -18,5 +18,40 @@
     "path": "scripts/tests/test_verify_cga_baseline.py",
     "stage": "S01",
     "reason": "CGA 원본 보존 검증기와 기준 manifest/검증 사례 추가"
+  },
+  {
+    "path": "apps/api/tests/test_multilingual_support_contract.py",
+    "stage": "S01",
+    "reason": "2026-10-29 신산님 승인: 원본 CSV 테스트 기대값 2건 및 Next 16.4.3 최소 보안 수정"
+  },
+  {
+    "path": "apps/web/package.json",
+    "stage": "S01",
+    "reason": "2026-10-29 신산님 승인: 원본 CSV 테스트 기대값 2건 및 Next 16.4.3 최소 보안 수정"
+  },
+  {
+    "path": "apps/web/package-lock.json",
+    "stage": "S01",
+    "reason": "2026-10-29 신산님 승인: 원본 CSV 테스트 기대값 2건 및 Next 16.4.3 최소 보안 수정"
+  },
+  {
+    "path": "docker-compose.yml",
+    "stage": "S01",
+    "reason": "승인된 환경 계승의 CGA-alone project/container/image/호스트와 새 DB 참조 격리. 서비스 구조/실제 Secret 불변"
+  },
+  {
+    "path": ".env.example",
+    "stage": "S01",
+    "reason": "승인된 환경 계승의 CGA-alone project/container/image/호스트와 새 DB 참조 격리. 서비스 구조/실제 Secret 불변"
+  },
+  {
+    "path": "apps/api/tests/test_cga_deployment_contract.py",
+    "stage": "S01",
+    "reason": "계획된 전용 환경 식별 변경의 직접 회귀 계약: 이름/URL만 cga-alone으로 대조, network/health/storage/security 보장 유지"
+  },
+  {
+    "path": "apps/api/tests/test_web_dependency_security.py",
+    "stage": "S01",
+    "reason": "신산님 승인 Next 16.4.3 패치에 직접 종속된 고정 버전 기대만 갱신. exact pin/lockfile 보안 검사 유지"
   }
 ]

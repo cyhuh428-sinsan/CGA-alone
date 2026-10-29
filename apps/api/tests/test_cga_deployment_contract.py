@@ -29,9 +29,9 @@ def test_web_server_uses_cga_internal_api_variable_only() -> None:
 
 def test_compose_exposes_cga_api_only_through_proxy_network() -> None:
     compose = _read("docker-compose.yml")
-    assert "container_name: cga-studio" in compose
-    assert "container_name: cga-api" in compose
-    assert "CGA_INTERNAL_API_BASE_URL: http://cga-api:8000" in compose
+    assert "container_name: cga-alone-studio" in compose
+    assert "container_name: cga-alone-api" in compose
+    assert "CGA_INTERNAL_API_BASE_URL: http://cga-alone-api:8000" in compose
     assert '"4173:4173"' in compose
     assert '"8000:8000"' not in compose
     assert "- .:/workspace" not in compose
@@ -53,9 +53,9 @@ def test_compose_runs_an_isolated_cga_vector_worker() -> None:
     compose = _read("docker-compose.yml")
     env_example = _read(".env.example")
 
-    assert "container_name: cga-vector-worker" in compose
-    assert "image: cga-vector-worker:latest" in compose
-    assert "AIDOT_VECTOR_WORKER_BASE_URL: http://cga-vector-worker:8350" in compose
+    assert "container_name: cga-alone-vector-worker" in compose
+    assert "image: cga-alone-vector-worker:latest" in compose
+    assert "AIDOT_VECTOR_WORKER_BASE_URL: http://cga-alone-vector-worker:8350" in compose
     assert "AIDOT_VECTOR_STORAGE_DIR: /workspace/apps/vector-worker/data" in compose
     assert "cga_vector_data:/workspace/apps/vector-worker/data" in compose
     assert "vector-worker:\n        condition: service_healthy" in compose
@@ -72,13 +72,13 @@ def test_compose_runs_cga_nlu_training_worker_with_shared_model_storage() -> Non
     compose = _read("docker-compose.yml")
 
     assert "nlu-training-worker:" in compose
-    assert "container_name: cga-nlu-training-worker" in compose
+    assert "container_name: cga-alone-nlu-training-worker" in compose
     assert 'command: ["python", "-m", "app.workers.nlu_training_worker"]' in compose
-    assert "image: cga-api:latest" in compose
+    assert "image: cga-alone-api:latest" in compose
     assert compose.count("cga_nlu_models:/workspace/data/nlu_models") == 2
     assert compose.count("cga_api_storage:/workspace/storage") == 2
-    assert "AIDOT_VECTOR_WORKER_BASE_URL: http://cga-vector-worker:8350" in compose
-    assert "REDIS_URL: ${REDIS_URL:-redis://cga-redis:6379/0}" in compose
+    assert "AIDOT_VECTOR_WORKER_BASE_URL: http://cga-alone-vector-worker:8350" in compose
+    assert "REDIS_URL: ${REDIS_URL:-redis://cga-alone-redis:6379/0}" in compose
     assert "db_net" in compose
     assert "cga_internal" in compose
 
@@ -119,10 +119,10 @@ def test_compose_runs_an_isolated_redis_cache_for_cga_api() -> None:
     compose = _read("docker-compose.yml")
     env_example = _read(".env.example")
 
-    assert "container_name: cga-redis" in compose
+    assert "container_name: cga-alone-redis" in compose
     assert "image: redis:7-alpine" in compose
     assert "CACHE_ENABLED: ${CACHE_ENABLED:-true}" in compose
-    assert "REDIS_URL: ${REDIS_URL:-redis://cga-redis:6379/0}" in compose
+    assert "REDIS_URL: ${REDIS_URL:-redis://cga-alone-redis:6379/0}" in compose
     assert "CACHE_DEFAULT_TTL_SECONDS: ${CACHE_DEFAULT_TTL_SECONDS:-60}" in compose
     assert "CACHE_VERSION_SECTION_TTL_SECONDS: ${CACHE_VERSION_SECTION_TTL_SECONDS:-60}" in compose
     assert "redis:\n        condition: service_healthy" in compose
@@ -131,7 +131,7 @@ def test_compose_runs_an_isolated_redis_cache_for_cga_api() -> None:
 
     for expected in (
         "CACHE_ENABLED=true",
-        "REDIS_URL=redis://cga-redis:6379/0",
+        "REDIS_URL=redis://cga-alone-redis:6379/0",
         "CACHE_DEFAULT_TTL_SECONDS=60",
         "CACHE_VERSION_SECTION_TTL_SECONDS=60",
     ):

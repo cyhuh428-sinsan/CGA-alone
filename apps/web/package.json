@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "adaptivecards": "^3.0.6",
-    "next": "16.4.0",
+    "next": "16.4.3",
     "react": "latest",
     "react-dom": "latest"
   },

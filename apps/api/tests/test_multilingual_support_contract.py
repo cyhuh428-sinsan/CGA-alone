@@ -236,6 +236,7 @@ def test_shared_training_header_uses_seven_language_catalog() -> None:
 def test_intent_list_uses_seven_language_catalog_without_changing_csv_contract() -> None:
     page_source = (ROOT_DIR / "apps/web/components/intent-list-page.tsx").read_text(encoding="utf-8")
     catalog_source = (ROOT_DIR / "apps/web/lib/i18n/intent-list.ts").read_text(encoding="utf-8")
+    import_source = (ROOT_DIR / "apps/web/lib/intent-import.ts").read_text(encoding="utf-8")
 
     assert "useI18n" in page_source
     assert "INTENT_LIST_CATALOGS[uiLanguage]" in page_source
@@ -243,8 +244,9 @@ def test_intent_list_uses_seven_language_catalog_without_changing_csv_contract()
     for language in SUPPORTED_LANGUAGES:
         assert f'  "{language}":' in catalog_source or f"  {language}:" in catalog_source
     assert "satisfies Record<SupportedLanguage, IntentListCatalog>" in catalog_source
-    assert '["의도명", "표시명", "의도 Key", "학습문장", "태그"]' in page_source
-    assert '["의도명", "Intent Name", "intentName", "name"]' in page_source
+    assert '["의도명", "표시명", "의도 Key", "학습문장", "태그", "답변"]' in import_source
+    assert "buildIntentUploadTemplateCsv()" in page_source
+    assert '["의도명", "Intent Name", "intentName", "name"]' in import_source
 
 
 def test_intent_list_localizes_delete_copy_and_preserves_reference_checks() -> None:
@@ -263,12 +265,14 @@ def test_intent_list_localizes_delete_copy_and_preserves_reference_checks() -> N
 def test_intent_csv_ui_is_localized_without_translating_csv_headers() -> None:
     page_source = (ROOT_DIR / "apps/web/components/intent-list-page.tsx").read_text(encoding="utf-8")
     catalog_source = (ROOT_DIR / "apps/web/lib/i18n/intent-list.ts").read_text(encoding="utf-8")
+    import_source = (ROOT_DIR / "apps/web/lib/intent-import.ts").read_text(encoding="utf-8")
 
     assert "copy.uploadTitle" in page_source
     assert "copy.uploadResultTitle" in page_source
     assert "copy.addedIntents" in page_source
-    assert 'const rows = [["의도명", "표시명", "의도 Key", "학습문장", "태그"]];' in page_source
-    assert '["의도명", "Intent Name", "intentName", "name"]' in page_source
+    assert 'const rows = [["의도명", "표시명", "의도 Key", "학습문장", "태그", "답변"]];' in import_source
+    assert "buildIntentDownloadCsv(dialogs, answersByDialogId)" in page_source
+    assert '["의도명", "Intent Name", "intentName", "name"]' in import_source
     assert "uploadTitle: string" in catalog_source
 
 

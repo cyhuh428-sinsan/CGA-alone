@@ -19,7 +19,7 @@ def _version_tuple(value: str) -> tuple[int, ...]:
 def test_security_sensitive_web_dependencies_are_pinned() -> None:
     manifest = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))
 
-    assert manifest["dependencies"]["next"] == "16.4.0"
+    assert manifest["dependencies"]["next"] == "16.4.3"
     assert manifest["overrides"]["postcss"] == "8.5.29"
     assert manifest["overrides"]["sharp"] == "0.35.5"
 
@@ -28,7 +28,7 @@ def test_locked_web_dependencies_meet_security_minimums() -> None:
     lock = json.loads(PACKAGE_LOCK.read_text(encoding="utf-8"))
     packages = lock["packages"]
 
-    assert _version_tuple(packages["node_modules/next"]["version"]) >= (16, 4, 0)
+    assert _version_tuple(packages["node_modules/next"]["version"]) >= (16, 4, 3)
     assert _version_tuple(packages["node_modules/baseline-browser-mapping"]["version"]) >= (2, 11, 0)
     assert _version_tuple(packages["node_modules/postcss"]["version"]) >= (8, 5, 29)
     assert _version_tuple(packages["node_modules/nanoid"]["version"]) >= (3, 3, 20)

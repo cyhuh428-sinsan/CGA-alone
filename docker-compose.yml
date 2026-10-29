@@ -1,9 +1,9 @@
-name: cga
+name: cga-alone
 
 services:
   api:
-    container_name: cga-api
-    image: cga-api:latest
+    container_name: cga-alone-api
+    image: cga-alone-api:latest
     restart: unless-stopped
     build:
       context: .
@@ -18,12 +18,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4173}
       CGA_LEGACY_ASSET_ROOT: ${CGA_LEGACY_ASSET_ROOT:-}
       CACHE_ENABLED: ${CACHE_ENABLED:-true}
-      REDIS_URL: ${REDIS_URL:-redis://cga-redis:6379/0}
+      REDIS_URL: ${REDIS_URL:-redis://cga-alone-redis:6379/0}
       CACHE_DEFAULT_TTL_SECONDS: ${CACHE_DEFAULT_TTL_SECONDS:-60}
       CACHE_VERSION_SECTION_TTL_SECONDS: ${CACHE_VERSION_SECTION_TTL_SECONDS:-60}
       EDIT_LOCK_CLEANUP_ENABLED: "true"
       EDIT_LOCK_CLEANUP_INTERVAL_SECONDS: "60"
-      AIDOT_VECTOR_WORKER_BASE_URL: http://cga-vector-worker:8350
+      AIDOT_VECTOR_WORKER_BASE_URL: http://cga-alone-vector-worker:8350
     depends_on:
       vector-worker:
         condition: service_healthy
@@ -50,8 +50,8 @@ services:
       start_period: 45s
 
   nlu-training-worker:
-    container_name: cga-nlu-training-worker
-    image: cga-api:latest
+    container_name: cga-alone-nlu-training-worker
+    image: cga-alone-api:latest
     restart: unless-stopped
     build:
       context: .
@@ -67,10 +67,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4173}
       CGA_LEGACY_ASSET_ROOT: ${CGA_LEGACY_ASSET_ROOT:-}
       CACHE_ENABLED: ${CACHE_ENABLED:-true}
-      REDIS_URL: ${REDIS_URL:-redis://cga-redis:6379/0}
+      REDIS_URL: ${REDIS_URL:-redis://cga-alone-redis:6379/0}
       CACHE_DEFAULT_TTL_SECONDS: ${CACHE_DEFAULT_TTL_SECONDS:-60}
       CACHE_VERSION_SECTION_TTL_SECONDS: ${CACHE_VERSION_SECTION_TTL_SECONDS:-60}
-      AIDOT_VECTOR_WORKER_BASE_URL: http://cga-vector-worker:8350
+      AIDOT_VECTOR_WORKER_BASE_URL: http://cga-alone-vector-worker:8350
     depends_on:
       vector-worker:
         condition: service_healthy
@@ -84,8 +84,8 @@ services:
       - cga_nlu_models:/workspace/data/nlu_models
 
   vector-worker:
-    container_name: cga-vector-worker
-    image: cga-vector-worker:latest
+    container_name: cga-alone-vector-worker
+    image: cga-alone-vector-worker:latest
     restart: unless-stopped
     build:
       context: .
@@ -115,7 +115,7 @@ services:
       start_period: 30s
 
   redis:
-    container_name: cga-redis
+    container_name: cga-alone-redis
     image: redis:7-alpine
     restart: unless-stopped
     command:
@@ -143,14 +143,14 @@ services:
       start_period: 5s
 
   studio:
-    container_name: cga-studio
-    image: cga-studio:latest
+    container_name: cga-alone-studio
+    image: cga-alone-studio:latest
     restart: unless-stopped
     build:
       context: .
       dockerfile: apps/web/Dockerfile
     environment:
-      CGA_INTERNAL_API_BASE_URL: http://cga-api:8000
+      CGA_INTERNAL_API_BASE_URL: http://cga-alone-api:8000
     depends_on:
       api:
         condition: service_healthy
