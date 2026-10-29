@@ -2,6 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -16,6 +17,8 @@ class BaselineGuardTest(unittest.TestCase):
         self.source = self.root / "source.py"
         self.source.write_text("value = 1\n", encoding="utf-8")
         self.git("add", "source.py")
+        self.git("-c", "user.name=QA", "-c", "user.email=qa@example.invalid", "commit", "--quiet", "-m", "fixture baseline")
+        self.source_commit = self.git("rev-parse", "HEAD").strip()
         self.baseline = self.root / "baseline.tsv"
         self.baseline.write_text(self.git("ls-files", "--stage"), encoding="utf-8")
         self.allow = self.root / "allow.json"
@@ -25,7 +28,14 @@ class BaselineGuardTest(unittest.TestCase):
         return subprocess.check_output(["git", "-C", str(self.root), *args], text=True)
 
     def check(self):
-        return subprocess.run(["python", str(SCRIPT), "--root", str(self.root), "--baseline", str(self.baseline), "--allowlist", str(self.allow)], capture_output=True, text=True)
+        spec = importlib.util.spec_from_file_location("baseline_guard", SCRIPT)
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        try:
+            report = guard.verify(self.root, self.baseline, self.allow, source_commit=self.source_commit)
+        except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as error:
+            return subprocess.CompletedProcess([], 2, stdout=str(error), stderr="")
+        return subprocess.CompletedProcess([], 0 if report["passed"] else 1, stdout=json.dumps(report), stderr="")
 
     def test_unchanged_source_passes(self):
         result = self.check()
@@ -41,9 +51,23 @@ class BaselineGuardTest(unittest.TestCase):
         name = "한글 파일.txt"
         (self.root / name).write_text("원본\n", encoding="utf-8")
         self.git("add", name)
+        self.git("-c", "user.name=QA", "-c", "user.email=qa@example.invalid", "commit", "--quiet", "-m", "unicode fixture")
+        self.source_commit = self.git("rev-parse", "HEAD").strip()
         self.baseline.write_text(self.git("ls-files", "--stage"), encoding="utf-8")
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_protected_file_and_manifest_tampering_fails(self):
+        self.source.write_text("value = 2\n", encoding="utf-8")
+        self.git("add", "source.py")
+        self.baseline.write_text(self.git("ls-files", "--stage"), encoding="utf-8")
+        self.assertNotEqual(self.check().returncode, 0)
+
+    def test_cli_uses_fixed_approved_source_commit(self):
+        root = SCRIPT.parent.parent
+        result = subprocess.run([sys.executable, str(SCRIPT), "--baseline", "scripts/cga-source-baseline.tsv", "--allowlist", "scripts/cga-change-allowlist.json"], cwd=root, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout)["source_commit"], "c2d643ed8d2c0a19f80caf2709efe6199e3c96bc")
 
     def test_missing_source_fails(self):
         self.source.unlink()

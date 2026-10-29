@@ -3,9 +3,13 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 from pathlib import Path, PurePosixPath
 import subprocess
 import sys
+
+
+CGA_SOURCE_COMMIT = "c2d643ed8d2c0a19f80caf2709efe6199e3c96bc"
 
 
 def git(root: Path, *args: str, data: str | None = None) -> str:
@@ -18,7 +22,7 @@ def decode_git_path(name: str) -> str:
     return name
 
 
-def verify(root: Path, baseline: Path, allowlist: Path) -> dict:
+def verify(root: Path, baseline: Path, allowlist: Path, *, source_commit: str = CGA_SOURCE_COMMIT) -> dict:
     expected = {}
     for line in baseline.read_text(encoding="utf-8").splitlines():
         if not line or line.startswith("#"):
@@ -31,6 +35,15 @@ def verify(root: Path, baseline: Path, allowlist: Path) -> dict:
         expected[name] = (mode, blob)
     if not expected:
         raise ValueError("empty baseline")
+    if not re.fullmatch(r"[0-9a-f]{40}", source_commit):
+        raise ValueError("source commit must be an exact SHA")
+    trusted = {}
+    for line in git(root, "ls-tree", "-r", "--full-tree", source_commit).splitlines():
+        metadata, name = line.split("\t", 1)
+        mode, object_type, blob = metadata.split()
+        trusted[decode_git_path(name)] = (mode, blob)
+    if expected != trusted:
+        raise ValueError("baseline manifest differs from trusted source commit")
     allowed = set()
     for entry in json.loads(allowlist.read_text(encoding="utf-8")):
         name = entry["path"]
@@ -60,7 +73,7 @@ def verify(root: Path, baseline: Path, allowlist: Path) -> dict:
     untracked = [decode_git_path(name) for name in git(root, "ls-files", "--others", "--exclude-standard").splitlines()]
     new_untracked = {name for name in untracked if name.startswith(("apps/", "packages/", "scripts/"))}
     unexpected = sorted((new_tracked | new_untracked) - allowed)
-    return {"baseline_files": len(expected), "missing": missing, "changed_outside_allowlist": changed, "unexpected_product_files": unexpected, "passed": not (missing or changed or unexpected)}
+    return {"source_commit": source_commit, "baseline_files": len(expected), "missing": missing, "changed_outside_allowlist": changed, "unexpected_product_files": unexpected, "passed": not (missing or changed or unexpected)}
 
 
 def main() -> int:
