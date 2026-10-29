@@ -1,0 +1,22 @@
+[
+  {
+    "path": "scripts/verify-cga-baseline.py",
+    "stage": "S01",
+    "reason": "CGA 원본 보존 검증기와 기준 manifest/검증 사례 추가"
+  },
+  {
+    "path": "scripts/cga-source-baseline.tsv",
+    "stage": "S01",
+    "reason": "CGA 원본 보존 검증기와 기준 manifest/검증 사례 추가"
+  },
+  {
+    "path": "scripts/cga-change-allowlist.json",
+    "stage": "S01",
+    "reason": "CGA 원본 보존 검증기와 기준 manifest/검증 사례 추가"
+  },
+  {
+    "path": "scripts/tests/test_verify_cga_baseline.py",
+    "stage": "S01",
+    "reason": "CGA 원본 보존 검증기와 기준 manifest/검증 사례 추가"
+  }
+]
