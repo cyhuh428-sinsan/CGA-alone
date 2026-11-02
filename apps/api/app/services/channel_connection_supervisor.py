@@ -245,6 +245,13 @@ class ConnectionSupervisor:
                     # DB 검증이 선행해도 실제 수신은 현재 target+generation을 다시 검증한다.
                     run.targets={t.spec.id:t for t in targets}
                     await asyncio.wait_for(run.listener.update(targets),10)
+                accepts=getattr(run.listener,'accepts_target',None)
+                if callable(accepts):
+                    eligible=[]
+                    for target in targets:
+                        if accepts(target):eligible.append(target)
+                        else:await asyncio.to_thread(self._error,target.spec,'CONNECTION_CREDENTIALS_MISMATCH')
+                    targets=eligible
                 live=await asyncio.to_thread(self._activate,lease_id,fence,targets)
                 if not live:
                     await self._close(key,run);continue
@@ -268,7 +275,13 @@ class ConnectionSupervisor:
                     if not isinstance(envelope,InboundEnvelope) or envelope.connection_id not in targets:raise HTTPException(403,'CONNECTION_RECEIVER_SCOPE_MISMATCH')
                     target=targets[envelope.connection_id];row=state._live(db,target.spec.id,run.lease_id,self.owner,run.fence)
                     if row.generation!=target.spec.generation:raise HTTPException(409,'CONNECTION_CHANGED')
+                    existing=db.scalar(select(ChannelConnectionDelivery.id).where(ChannelConnectionDelivery.connection_id==row.id,ChannelConnectionDelivery.event_key==state.scoped_hash(envelope.event['eventId']))) if row.provider=='slack' else None
                     item=state.accept_delivery(db,row.id,run.lease_id,self.owner,run.fence,envelope.event)
+                    if row.provider=='slack' and existing is None and item.status=='received' and envelope.event['addressed']:
+                        busy=db.scalar(select(ChannelConnectionDelivery.id).where(ChannelConnectionDelivery.connection_id==row.id,ChannelConnectionDelivery.id!=item.id,
+                            ChannelConnectionDelivery.generation==row.generation,ChannelConnectionDelivery.native_room_hash==item.native_room_hash,
+                            ChannelConnectionDelivery.status.in_(['received','executing','ready','sending','unknown']),ChannelConnectionDelivery.event_json['addressed'].astext=='true').limit(1))
+                        if busy is not None:item.status='failed';item.last_error_code='ROOM_BUSY'
                     if envelope.private_context and item.context_ciphertext is None:
                         item.context_ciphertext=encrypt_connection_state(envelope.private_context,row.organization_id,row.id,settings.channel_connection_encryption_key,settings.channel_connection_key_version,'delivery:'+str(item.id))
                         item.context_key_version=settings.channel_connection_key_version
