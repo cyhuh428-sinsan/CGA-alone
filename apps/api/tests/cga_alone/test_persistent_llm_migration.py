@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, select, text, delete
 from sqlalchemy.orm import Session
 from app.core.config import settings
@@ -44,6 +45,30 @@ def run_revision(engine, direction, revision):
 def revision(engine):
     with engine.connect() as db:
         return db.scalar(text("select version_num from alembic_version"))
+
+
+@pytest.fixture(autouse=True)
+def isolated_persistent_revision(test_engine, migrated_test_database):
+    """검사 대상은0029로고정하되 최신기능의schema를뒤시험에복원한다."""
+    ini = Path(__file__).parents[2] / "alembic.ini"
+    config = Config(str(ini))
+    config.set_main_option("script_location", str(ini.parent / "alembic"))
+    head = ScriptDirectory.from_config(config).get_current_head()
+    with test_engine.connect() as db:
+        for table in (
+            "channel_connections", "channel_connection_rooms",
+            "channel_connection_deliveries", "channel_installation_leases",
+        ):
+            if inspect(test_engine).has_table(table):
+                assert db.scalar(text("select count(*) from " + table)) == 0, (
+                    "다른 QA 연결 자료가 있으면 migration 시험을 실행하지 않습니다."
+                )
+    try:
+        run_revision(test_engine, "downgrade", "20261029_0029")
+        yield
+    finally:
+        run_revision(test_engine, "upgrade", "head")
+        assert revision(test_engine) == head
 
 
 def test_empty_upgrade_downgrade_preserves_legacy_queue(

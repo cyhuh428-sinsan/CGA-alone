@@ -201,8 +201,8 @@
   },
   {
     "path": "apps/api/tests/cga_alone/test_persistent_llm_migration.py",
-    "stage": "P01",
-    "reason": "승인된 전용 QA0029 가역·기존 큐 인덱스/행 보존 및 비어 있지 않은 원장 downgrade 거부 검증"
+    "stage": "P01/P04",
+    "reason": "승인된 전용 QA0029 가역·기존 큐 인덱스/행 보존 및 비어 있지 않은 원장 downgrade 거부 검증; P04 재개: 0029 가역성 검사는 유지하고 fixture 종료 시 현재 head를 복원해 최신 채널 테이블 누수를 차단"
   },
   {
     "path": "apps/api/app/services/openai_conversations.py",
