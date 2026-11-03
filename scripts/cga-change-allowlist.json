@@ -61,8 +61,8 @@
   },
   {
     "path": "apps/api/app/api/routes/bots.py",
-    "stage": "S02/P01/P03",
-    "reason": "S02 한 봇·소유 격리·허브 원문 비노출 및 승인 P01 샘플 버전 mutation/worker fence·닫힌 기록 보존 최소 연결; P03 열린 지속 방의 자동 운영버전 종료 제외; P03 실제JWT room/turn/ACK·고정버전 text Talk/End·예산계층·전용worker와 새샘플버전 사전guard; P04 기존 worker에 만료 persistent operation의 결과확인 연결; 일반채널/살아있는 lease 보존"
+    "stage": "S02/P01/P03/S03/P04",
+    "reason": "S02 한 봇·소유 격리·허브 원문 비노출 및 승인 P01 샘플 버전 mutation/worker fence·닫힌 기록 보존 최소 연결; P03 열린 지속 방의 자동 운영버전 종료 제외; P03 실제JWT room/turn/ACK·고정버전 text Talk/End·예산계층·전용worker와 새샘플버전 사전guard; 승인된 S03 버전 AI 모듈 참조 저장 및 운영 지정 전 같은 버전 모듈 검사; P04 기존 worker에 만료 persistent operation의 결과확인 연결; 일반채널/살아있는 lease 보존"
   },
   {
     "path": "apps/api/app/api/routes/hubs.py",
@@ -141,8 +141,8 @@
   },
   {
     "path": "apps/web/lib/studio-bots-api.ts",
-    "stage": "S02",
-    "reason": "2026-10-29 신산님 승인: 본인 허브 한정 최소 후보 조회의 전용 DTO/호출 연결"
+    "stage": "S02/S03/S04",
+    "reason": "2026-10-29 신산님 승인: 본인 허브 한정 최소 후보 조회의 전용 DTO/호출 연결; 승인된 S03 기존 PATCH 설정 payload에 모듈 ID 전달; 승인 S04 기존 PATCH의 결과 매핑 타입 전달"
   },
   {
     "path": "apps/web/components/bot-hub-home.tsx",
@@ -156,8 +156,8 @@
   },
   {
     "path": "apps/api/app/models/__init__.py",
-    "stage": "P01",
-    "reason": "승인된 지속 LLM 샘플 영속 매핑·버전 pin·공용 예산 원자예약과 전용 PG 검증"
+    "stage": "P01 / C01 / C02",
+    "reason": "승인된 지속 LLM 샘플 영속 매핑·버전 pin·공용 예산 원자예약과 전용 PG 검증; C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호; C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
   },
   {
     "path": "apps/api/app/schemas/persistent_llm.py",
@@ -166,7 +166,7 @@
   },
   {
     "path": "apps/api/app/services/version_pins.py",
-    "stage": "P01",
+    "stage": "P01/P04",
     "reason": "승인된 지속 LLM 샘플 영속 매핑·버전 pin·공용 예산 원자예약과 전용 PG 검증; P04 등록샘플 파생projection 최신재조회 장벽, pin/권한/일반버전불변"
   },
   {
@@ -186,17 +186,17 @@
   },
   {
     "path": "apps/api/tests/cga_alone/test_persistent_llm_pins.py",
-    "stage": "P01",
+    "stage": "P01/P04",
     "reason": "승인된 지속 LLM 샘플 영속 매핑·버전 pin·공용 예산 원자예약과 전용 PG 검증; P04 마지막참조close와새open·mutation의실제PGbarrier 경합검증"
   },
   {
     "path": "apps/api/tests/cga_alone/test_persistent_llm_budget.py",
-    "stage": "P01",
+    "stage": "P01/P04",
     "reason": "승인된 지속 LLM 샘플 영속 매핑·버전 pin·공용 예산 원자예약과 전용 PG 검증; P04 별도OS process 전역/조직마지막한도·중복·unknown보존 검증"
   },
   {
     "path": "apps/api/tests/cga_alone/test_persistent_llm_knowledge.py",
-    "stage": "P01",
+    "stage": "P01/P04",
     "reason": "승인된 실제 복제·로컬 worker 재학습의 원본 문서/모델/지침 불변 및 미검증 공유 RAG 실패 닫힘 검증; P04 복제후검색결과/버전캐시범위정리/새OSprocess 재조회불변 검증"
   },
   {
@@ -216,38 +216,38 @@
   },
   {
     "path": "apps/api/app/services/persistent_llm.py",
-    "stage": "P02/P02/P03",
+    "stage": "P02/P02/P03/P04",
     "reason": "승인된 기존 방/메시지/큐의 표출 ACK·canonical 확정·PG/provider 결과불명 복구 및 무재생성 검증; 기존 room/message/queue의 표출 확정·복구와 P03 인증검사 hook/닫힌 세대 조회/고정Q&A 무생성 canonical 연결; P04 승인 실제프로세스장애 검증의 기존 lease deadline·fence/unknown 복구 최소보완; TTL 예산반환/unpin/모델재POST 금지"
   },
   {
     "path": "apps/api/tests/cga_alone/test_persistent_llm_recovery.py",
-    "stage": "P02",
+    "stage": "P02/P04",
     "reason": "승인된 기존 방/메시지/큐의 표출 ACK·canonical 확정·PG/provider 결과불명 복구 및 무재생성 검증; P04 실제 QA 자식process 종료/재시작·파일지속전송대역·단계별 비용/표출/메모리/중복불가 검증"
   },
   {
     "path": "apps/api/app/api/routes/channels.py",
-    "stage": "P03",
-    "reason": "승인된 P03 보호방 shared-key 우회 차단·기존 worker 분리·열린 pin의 운영버전 보존"
+    "stage": "S04/S05·S06·S07·S08·S09·S10",
+    "reason": "승인된 P03 보호방 shared-key 우회 차단·기존 worker 분리·열린 pin의 운영버전 보존; 승인된 S03 운영 준비 검사: 기존 채널 진입의 구성 미완료 차단만 추가, 실행순서 변경은 S04; S04 기존 sync/queue 미인식에 제작자 2차모듈 ID실행·결과판정·Talk재개 연결, 일반/허브 경로 보존; 승인된 Webchat 서버토큰/hash/actor 바인딩과 공용 우회 차단(새schema/전역키 없음); 승인 공유방 서버 ContextVar의 actor/세대 fence·외부실행 전 transaction 종료·실제종료/대기정산 최소 hook; 승인 S06 선택 waitingNodeId·방 실제 적용 activeVersion 최소 응답 전달, 기존 인증/변수 비노출 유지; 승인 S07 기존 rooms/messages/GET 선택mode·채널/개별참가자증명·bot입력역할·shared입장 재사용, legacy기본/P04유지; S08 승인된 Slack 채널 선택값 추가, 기존 매핑 fallback·runtime 재사용; S08 단일검토 Important2: Slack Card/Carousel만 빈 선택 필드 위치 보존, 다른 채널 원본 처리 유지; S09 사용자 직접 승인: Discord 허용값·해당 카드 빈 선택 필드 위치 보존만 추가; Discord health만 기존 optional provider/renderer/supported_outputs 형식에 맞춰 원본 consumer 회귀 보존; S10 직접 승인: telegram 허용값/기존health descriptor/카드빈위치 보존만 추가; S11 사용자 직접 승인: google-chat/GOOGLE_CHAT·공간/thread·6종cardsV2/원본메시지선택복원과 기존 원장/관리 renderer 소비만 최소 연결, 공개HTTP필드/schema/Secret/배포 없음 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만"
   },
   {
     "path": "apps/api/tests/cga_alone/test_persistent_llm_access.py",
-    "stage": "P03",
+    "stage": "P03/P04",
     "reason": "승인된 P03 실제PG 보호방/인증 범위·legacy worker/버전전환 경계 검증; P04 실제 JWT/PG worker의 만료/활성 lease·unknown 예산/pin 보존 회귀"
   },
   {
     "path": "apps/api/app/core/config.py",
-    "stage": "P03",
-    "reason": "승인된 단일 지속 샘플 기본OFF 및 실제 실행 전 모델/예산/횟수/요금표 미설정 gate"
+    "stage": "P03 / C01 / C02",
+    "reason": "승인된 단일 지속 샘플 기본OFF 및 실제 실행 전 모델/예산/횟수/요금표 미설정 gate; C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호; C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
   },
   {
     "path": "apps/api/app/main.py",
     "stage": "P03",
-    "reason": "승인된 기존 queue worker에 persistent operation 전용 처리 연결, 일반 worker 분리 유지"
+    "reason": "승인된 기존 queue worker에 persistent operation 전용 처리 연결, 일반 worker 분리 유지; C07 별도승인 Google Chat startup등록/단일수신주소·Google인증/원장commit뒤ACK, 기존기본값false/기존Teams경로유지·C08 승인 LINE 단일수신/기존worker등록·동일세대접수시각보존"
   },
   {
     "path": "apps/web/components/simulator-page.tsx",
-    "stage": "P03",
-    "reason": "승인된 P03 단일 샘플 전용 지속 경로·기존 simulator runtime 보존·서버 Talk DOM 확인과 재접속/종료/초기화"
+    "stage": "P03·S04·S06",
+    "reason": "승인된 P03 단일 샘플 전용 지속 경로·기존 simulator runtime 보존·서버 Talk DOM 확인과 재접속/종료/초기화; S04 LegacySimulator local miss·Function/Talk·End에 결과판정 연결, 보류 지속LLM 경로 불변; S06 기존 저장 메시지의 카드·폼 표시 연결, 개인 미리보기와 보류 지속 경로 보존; S14 공유 모드에서 개인 분석/토글 비표시 및 공유 Adaptive 오류의 개인 분석 귀속 차단(사용자 승인)"
   },
   {
     "path": "apps/web/components/persistent-llm-runtime.test.mjs",
@@ -265,9 +265,639 @@
     "reason": "독립검토 확정미접수422 입력잠금 보완: 기존 same-origin Error 메시지/인증처리/재시도는 유지하고 HTTP status만 내부 오류 metadata에 보존"
   },
   {
+    "path": "apps/api/app/schemas/bot.py",
+    "stage": "S03/S04",
+    "reason": "승인된 S03 secondary_llm.module_id를 기존 BotUpdate/버전 AI 저장 경로에 전달; 사용자 추가 승인 S04 secondary_llm.outcome 변수/답변성공값/미인식값 저장 전달"
+  },
+  {
+    "path": "apps/api/app/services/bot_ai_policy.py",
+    "stage": "S03/S04",
+    "reason": "승인된 S03 local ML/시멘틱 및 제작자 지정 2차 모듈의 공통 운영 준비 검사; 사용자 추가 승인 S04 운영 준비 시 명확한 결과 매핑 필수, 초안 저장/허브 유지"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_secondary_llm_config.py",
+    "stage": "S03/S04",
+    "reason": "승인된 S03 초안/저장/ID/운영/잘못된 모듈·로컬엔진 회귀; 승인 S04 필수 결과 매핑에 맞춰 기존 정상 운영/복제/직접Webchat fixture만 준비, 기존 검증기준 보존"
+  },
+  {
+    "path": "apps/web/lib/bot-settings.ts",
+    "stage": "S03/S04",
+    "reason": "승인된 S03 버전 AI 모듈 ID 타입 및 정규화; 승인 S04 결과 매핑 타입·정규화/기존 모듈 ID 보존"
+  },
+  {
+    "path": "apps/web/components/bot-settings-page.tsx",
+    "stage": "S03/S04",
+    "reason": "승인된 S03 기존 AI 설정 카드 안의 모듈 선택만 추가, 메뉴/공용 CSS/편집기 불변; 승인 S04 기존 AI 설정 카드에 결과 변수/두값 입력만 추가, 메뉴/CSS/편집기 유지"
+  },
+  {
+    "path": "apps/web/lib/i18n/bot-settings.ts",
+    "stage": "S03/S04",
+    "reason": "승인된 S03 새 모듈 선택 문구의 기존 7개 언어 보존; 승인 S04 새 결과 설정 문구의 기존 7언어 유지"
+  },
+  {
+    "path": "apps/web/components/secondary-llm-config.test.mjs",
+    "stage": "S03/S04",
+    "reason": "승인된 S03 미구성 초안과 안정 모듈 ID 정규화 검증; 승인 S04 변수/두값만 보존하고 임의 필드 소거 회귀"
+  },
+  {
+    "path": "apps/api/app/api/routes/webchat.py",
+    "stage": "S04/S05·S06·S07·S08·S09·S10 / C02",
+    "reason": "S03 독립 검토 보완: 실제 등록된 기존 Webchat 직접 API에도 같은 준비검사 적용, 기존NLU/인증/응답/허브동작 보존; S04 구성된 2단계 봇만 기존 ChannelRoom 실행기로 연결, 일반·허브와 기존 응답 계약 보존; 승인된 Webchat 서버토큰/hash/actor 바인딩과 공용 우회 차단(새schema/전역키 없음); 사용자승인 공유방 생성/입장·참가자별 hash증명·개인방격리·기록조회 최소계약; 승인 S06 선택 waitingNodeId·방 실제 적용 activeVersion 최소 응답 전달, 기존 인증/변수 비노출 유지; 승인 S07 기존 rooms/messages/GET 선택mode·채널/개별참가자증명·bot입력역할·shared입장 재사용, legacy기본/P04유지; S08 사용자 직접 승인 callback sourceMessageId 계약: 기존 원장 반환 뒤 같은 방 잠금에서 최신 카드·질문자 검증, 다른 채널 불변; S09 사용자 직접 승인: 사용자 승인 원본메시지ID/같은방잠금 원장우선 최신카드 검증을 Discord에도 적용, Slack 보호 유지; S10 직접 승인: 기존 같은방잠금/원장우선 sourceMessageId 검증을 Telegram에도 적용·다른client보존; S11 사용자 직접 승인: google-chat/GOOGLE_CHAT·공간/thread·6종cardsV2/원본메시지선택복원과 기존 원장/관리 renderer 소비만 최소 연결, 공개HTTP필드/schema/Secret/배포 없음 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만; C02 승인된 기존방/참가자 증명 원자적재사용·연결방 공유키join 차단·기존SDK선택복원·직접통합회귀"
+  },
+  {
+    "path": "apps/api/app/services/secondary_llm.py",
+    "stage": "S04",
+    "reason": "승인 S04 기존 변수/모듈 실행을 소비하는 결과 판정·재진입/pending 재개 helper, Provider/새세션 없음"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_two_stage_runtime.py",
+    "stage": "S04",
+    "reason": "승인 S04 명시 결과값·오류/미인식 분리·fresh 판정값·원질문/변수 보존·단일 실행/재개 회귀"
+  },
+  {
+    "path": "apps/web/lib/secondary-llm.ts",
+    "stage": "S04",
+    "reason": "승인 S04 client 공통 결과 판정·이전 결과 alias 정리, 기존 simulator 엔진 재사용"
+  },
+  {
+    "path": "apps/web/components/secondary-llm-runtime.test.mjs",
+    "stage": "S04",
+    "reason": "승인 S04 client 결과값·오류/pending·기존 변수 보존 회귀"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_webchat_credentials.py",
+    "stage": "S04",
+    "reason": "신산님 승인 대화 자격 증명의 실제 PG·HTTP header·타인/위조/만료·공용채널/큐 우회·보호marker 보존 회귀"
+  },
+  {
+    "path": "apps/api/app/api/routes/am.py",
+    "stage": "S04",
+    "reason": "승인Webchat자격증명방만 기존AM직접조회/종료우회차단, 일반/기존허브경로유지"
+  },
+  {
+    "path": "apps/api/app/services/room_turn.py",
+    "stage": "S05",
+    "reason": "승인 S05 기존 room metadata의 PG 원자 선점·소유 대기·서버 generation fence·기존대기timeout·처리 lease 갱신/만료 핵심, 새 schema/세션시스템 없음"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_room_turn.py",
+    "stage": "S05",
+    "reason": "실제 PG 두 연결의 동일방경합/다른방병렬·세대·대기만료·종료해제 검증, exact소유QA정리"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_shared_webchat.py",
+    "stage": "S05",
+    "reason": "승인된 공유방 생성·입장·참가자별 서버증명·공유기록·인증/개인방격리의 실제PG API 검증"
+  },
+  {
+    "path": "packages/shared/src/channel.ts",
+    "stage": "S06·S09·S10 / C02",
+    "reason": "승인 S06 공유방 기존 turn 상태·참가자별 증명 SDK·일반채팅/봇질문 입력허용, 기존 wire/helper 유지; S07 승인된 선택 공통 채널 계약의 생성·입장·조회·메시지 SDK, 증명·이벤트 헤더와 재시도 없는 호출; S08 승인된 Slack native event/방·actor·event 식별과 Block Kit 변환 helper, 기존 SDK 유지; S09 사용자 직접 승인: 승인 Discord native parser/표현 packet/기존 공통SDK 호출·인증기록 기반 짧은 버튼출처·응답보존·자동재시도0; S10 직접 승인: 승인 Telegram native parser/6표현packet/개인·그룹·주제·봇연결scope/원본선택복원/기존SDKcaller/자동재시도0; S11 사용자 직접 승인: google-chat/GOOGLE_CHAT·공간/thread·6종cardsV2/원본메시지선택복원과 기존 원장/관리 renderer 소비만 최소 연결, 공개HTTP필드/schema/Secret/배포 없음 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만; C02 승인된 기존방/참가자 증명 원자적재사용·연결방 공유키join 차단·기존SDK선택복원·직접통합회귀"
+  },
+  {
+    "path": "apps/web/components/room-turn-controls.test.mjs",
+    "stage": "S06·S09·S10",
+    "reason": "S06 타인봇질문차단/소유자후속/일반채팅/종료재개 및 기존 공유방 API header/명시호출 wire 검증; S07 승인된 공통 SDK wire·증명·이벤트 식별·자동 재시도 금지 검증; S08 Slack 공통SDK 실제packet/위조scope·카드최신성·무재시도·받은결과보존·지원renderer 데이터 회귀; S09 실제 Discord SDK 공통HTTP/출처선택복구·재전송/잘못된새방/길이/결과보존 경계 시험; S10 승인 Telegram 실제SDK 호출/짧은버튼·원본선택복원/접근불명·빈결과·결과보존·자동재시도0 경계검증 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_simulator_turn_contract.py",
+    "stage": "S06",
+    "reason": "기존 개인/공유 HTTP 계약의 실제 PG 참가자 입력·저장·후속·재접속 읽기 검증, 외부 모델 없음"
+  },
+  {
+    "path": "apps/web/lib/i18n/simulator.ts",
+    "stage": "S06",
+    "reason": "기존 다국어 회귀에서 검출된 공유방 UI 문구를 기존 simulator 카탈로그의 7개 언어로 보완, 기존 키/번역/검사 기준 보존"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_client_contract.py",
+    "stage": "S07",
+    "reason": "승인된 기존3종 선택mode·개별증명·명시호출·bot질문자·event중복·방격리의 실제PG HTTP 계약 검증, legacy보존"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_client_templates.py",
+    "stage": "S07",
+    "reason": "기존3종 템플릿 등록·재조회·Talk 저장·native 출력과 지원불가 표현 거절 회귀, 실제 외부 플랫폼 증거와 구분"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/webchat.json",
+    "stage": "S07",
+    "reason": "기존3종 템플릿 등록·재조회·Talk 저장·native 출력과 지원불가 표현 거절 회귀, 실제 외부 플랫폼 증거와 구분"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/kakao.json",
+    "stage": "S07",
+    "reason": "기존3종 템플릿 등록·재조회·Talk 저장·native 출력과 지원불가 표현 거절 회귀, 실제 외부 플랫폼 증거와 구분"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/ms-teams.json",
+    "stage": "S07",
+    "reason": "기존3종 템플릿 등록·재조회·Talk 저장·native 출력과 지원불가 표현 거절 회귀, 실제 외부 플랫폼 증거와 구분"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/clients/test_slack.py",
+    "stage": "S08",
+    "reason": "승인 Slack 최소계약의 native 표본·명시호출/차례/중복/스레드격리·실PGtemplate 왕복 RED/GREEN"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/slack.json",
+    "stage": "S08",
+    "reason": "승인 Slack 최소계약의 native 표본·명시호출/차례/중복/스레드격리·실PGtemplate 왕복 RED/GREEN"
+  },
+  {
     "path": "apps/api/app/api/routes/admin.py",
-    "stage": "P04",
-    "reason": "승인된 P04 버전지식불변: 실제경합 RED2로 재현한 등록샘플 Admin backfill stale 파생자료 덮어쓰기만 버전장벽/최신재조회로보완; 기존Admin권한/응답/일반버전유지"
+    "stage": "S08·S09·S10 / C01/P04",
+    "reason": "직접승인 exact추가경로: SLACK 지원renderer 검증만 보완; S09 사용자 직접 승인: 승인 Discord 6가지 renderer 검증만 추가; S10 직접 승인: 승인 Telegram 6renderer 검증만 추가; S11 사용자 직접 승인: google-chat/GOOGLE_CHAT·공간/thread·6종cardsV2/원본메시지선택복원과 기존 원장/관리 renderer 소비만 최소 연결, 공개HTTP필드/schema/Secret/배포 없음 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만 / S13 직접승인 기존 기본 채널·템플릿 초기화의 조직 row 잠금 한곳만 추가; C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호; P04 버전지식불변: 실제경합 RED2로 재현한 등록샘플 Admin backfill stale 파생자료 덮어쓰기만 버전장벽/최신재조회로보완; 기존Admin권한/응답/일반버전유지"
+  },
+  {
+    "path": "apps/web/app/admin/templates/page.tsx",
+    "stage": "S08·S09·S10",
+    "reason": "승인된 Slack 지원renderer 선택 데이터만 제한, 기존 화면구조 보존; S09 사용자 직접 승인: 승인 Discord renderer 선택 데이터만 추가·기존 디자인 유지; S10 직접 승인: 승인 Telegram renderer 선택 데이터만 추가·디자인보존; S11 사용자 직접 승인: google-chat/GOOGLE_CHAT·공간/thread·6종cardsV2/원본메시지선택복원과 기존 원장/관리 renderer 소비만 최소 연결, 공개HTTP필드/schema/Secret/배포 없음 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/clients/test_discord.py",
+    "stage": "S09",
+    "reason": "기승인 WORK_PLAN S09 여섯 기본 RED시험: 기존 공통API/PG/template/Talk 경계의 Discord 기능 부재 확인. 제품 구현/공개계약 적용은 별도 승인 후"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/discord.json",
+    "stage": "S09",
+    "reason": "기승인 S09 공식 MESSAGE_CREATE 합성 native 표본·저장 Talk 예시. 실 Secret/실 플랫폼 게시 없음"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/clients/test_telegram.py",
+    "stage": "S10",
+    "reason": "기승인 WORK_PLAN S10 여섯 기본 RED와 개인/그룹·주제 분리 시험. 제품 구현/공개계약 적용은 승인 후"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/telegram.json",
+    "stage": "S10",
+    "reason": "기승인 S10 공식 Telegram message/update 개인·그룹 합성 표본과 Talk 예시, 실제 Secret/플랫폼 게시 없음"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/clients/test_google_chat.py",
+    "stage": "S11",
+    "reason": "기승인 WORK_PLAN S11 여섯 기본 RED와 공식 Google Chat 합성 공간/thread 표본. 제품 계약 적용은 별도 승인 후"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/google-chat.json",
+    "stage": "S11",
+    "reason": "기승인 WORK_PLAN S11 여섯 기본 RED와 공식 Google Chat 합성 공간/thread 표본. 제품 계약 적용은 별도 승인 후"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/clients/test_line.py",
+    "stage": "S12",
+    "reason": "기승인 WORK_PLAN S12 기본6 RED와 공식 LINE 합성 message/webhook 표본. 제품 계약 적용은 별도 승인 후"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/fixtures/client_templates/line.json",
+    "stage": "S12",
+    "reason": "기승인 WORK_PLAN S12 기본6 RED와 공식 LINE 합성 message/webhook 표본. 제품 계약 적용은 별도 승인 후"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_admin_seed_concurrency.py",
+    "stage": "S13",
+    "reason": "직접 승인한 Admin 기본자료 동시 초기화 최소 예외의 실제 PostgreSQL 동시·반복·조직격리 회귀; S14 실제 PG 잠금/조회 동기화와 지연 worker·잠금 제거 대역 회귀(사용자 승인)"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_shared_room_400.py",
+    "stage": "S13",
+    "reason": "기승인 WORK_PLAN S13 400 서버발급 참가자 합성 라우팅·차례·일반대화·다른방/개인방 독립 회귀, 실제 400인 플랫폼 성능 아님"
+  },
+  {
+    "path": "docs/manual/README.md",
+    "stage": "S13",
+    "reason": "S13 기승인 변경 기능 최소 사용 방법의 진입 링크만 추가"
+  },
+  {
+    "path": "docs/manual/CGA_ALONE_DEVELOPMENT_GUIDE.md",
+    "stage": "S13",
+    "reason": "S13 기승인 CGA-alone 변경 기능 최소 사용 방법·내부/외부 검증 구분·P04보류 보충, 원본PDF/타언어/기존기능 재작성 없음"
+  },
+  {
+    "path": "apps/web/components/simulator-analysis-isolation.test.mjs",
+    "stage": "S14",
+    "reason": "공유/개인 분석 표시 및 Adaptive 오류 귀속 회귀시험"
+  },
+  {
+    "path": "apps/web/app/me/password/page.tsx",
+    "stage": "S15",
+    "reason": "사용자 직접 지적: 비밀번호 변경 성공 후 기존 인증 유지·제작 화면 replace 이동만 추가. API/정책/권한 불변"
+  },
+  {
+    "path": "apps/web/components/password-change-navigation.test.mjs",
+    "stage": "S15",
+    "reason": "비밀번호 변경 제출 handler 성공/대기/오류/확인 불일치와 이동 회귀"
+  },
+  {
+    "path": "apps/api/app/api/router.py",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/api/alembic/versions/20261102_0030_channel_connections.py",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/api/app/api/routes/channel_connections.py",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/api/app/models/channel_connection.py",
+    "stage": "C01 / C02",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호; C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "apps/api/app/schemas/channel_connection.py",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/api/app/services/channel_connections.py",
+    "stage": "C01 / C02",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호; C02 승인된 기존방/참가자 증명 원자적재사용·연결방 공유키join 차단·기존SDK선택복원·직접통합회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connections.py",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/web/app/admin/channels/page.tsx",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/web/components/channel-connections-panel.tsx",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/web/components/channel-connections.test.mjs",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/web/lib/channel-connections-api.ts",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/web/lib/i18n/channel-connections.ts",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "docs/manual/channel-connections.md",
+    "stage": "C01",
+    "reason": "C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호"
+  },
+  {
+    "path": "apps/api/alembic/versions/20261102_0031_connection_runtime.py",
+    "stage": "C02",
+    "reason": "C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "apps/api/app/models/channel_connection_runtime.py",
+    "stage": "C02",
+    "reason": "C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_bridge.py",
+    "stage": "C02",
+    "reason": "C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_state.py",
+    "stage": "C02",
+    "reason": "C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_bridge.py",
+    "stage": "C02",
+    "reason": "C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_state.py",
+    "stage": "C02",
+    "reason": "C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "packages/shared/src/channel-bridge.mjs",
+    "stage": "C02",
+    "reason": "C02 승인된 공통실행 기반: 기존SDK 순수변환 재사용·설치lease·전달원장·기존방map·단계별회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_runtime.py",
+    "stage": "C02",
+    "reason": "C02 승인된 기존방/참가자 증명 원자적재사용·연결방 공유키join 차단·기존SDK선택복원·직접통합회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_runtime.py",
+    "stage": "C02",
+    "reason": "C02 승인된 기존방/참가자 증명 원자적재사용·연결방 공유키join 차단·기존SDK선택복원·직접통합회귀"
+  },
+  {
+    "path": "apps/api/alembic/versions/20261102_0032_verified_listener_scope.py",
+    "stage": "C02",
+    "reason": "승인된 공통 수신 작업자·실행 수명주기·검증된 listener scope·Node SDK 실행기와 직접 회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_supervisor.py",
+    "stage": "C02",
+    "reason": "승인된 공통 수신 작업자·실행 수명주기·검증된 listener scope·Node SDK 실행기와 직접 회귀; C07 Google Chat만동일generation 검증지연/재시작접수기준유지·기존타provider불변·C08 승인 LINE 단일수신/기존worker등록·동일세대접수시각보존"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_supervisor.py",
+    "stage": "C02",
+    "reason": "승인된 공통 수신 작업자·실행 수명주기·검증된 listener scope·Node SDK 실행기와 직접 회귀"
+  },
+  {
+    "path": "apps/api/Dockerfile",
+    "stage": "C02",
+    "reason": "승인된 공통 수신 작업자·실행 수명주기·검증된 listener scope·Node SDK 실행기와 직접 회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_teams_auth.py",
+    "stage": "C03",
+    "reason": "승인된 Teams 준비 범위의 순수 BotConnector JWT/OIDC·회신host 검증 및 합성회귀; 공개수신연결/실제호출/배포없음"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_teams_auth.py",
+    "stage": "C03",
+    "reason": "승인된 Teams 준비 범위의 순수 BotConnector JWT/OIDC·회신host 검증 및 합성회귀; 공개수신연결/실제호출/배포없음"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_teams.py",
+    "stage": "C03",
+    "reason": "승인된 Teams 첫 Activity 대기·앱 교차조직단독수신·기준시각 및 기존공통경계회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_teams.py",
+    "stage": "C03",
+    "reason": "승인된 Teams OAuth·JWT단일수신·영속첫Activity증명·기존원장/방연계·고정REST전송 및 대역통합회귀"
+  },
+  {
+    "path": "apps/api/app/api/routes/channel_connection_events.py",
+    "stage": "C03",
+    "reason": "승인된 Teams OAuth·JWT단일수신·영속첫Activity증명·기존원장/방연계·고정REST전송 및 대역통합회귀; C07 별도승인 Google Chat startup등록/단일수신주소·Google인증/원장commit뒤ACK, 기존기본값false/기존Teams경로유지·C08 승인 LINE 단일수신/기존worker등록·동일세대접수시각보존"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_teams_adapter.py",
+    "stage": "C03",
+    "reason": "승인된 Teams OAuth·JWT단일수신·영속첫Activity증명·기존원장/방연계·고정REST전송 및 대역통합회귀"
+  },
+  {
+    "path": "packages/shared/src/teams.mjs",
+    "stage": "C03",
+    "reason": "승인된 Teams 기본6표현/기존AdaptiveCard 정규화재사용·원본/양식응답·전송크기 경계검증"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_teams_packets.py",
+    "stage": "C03",
+    "reason": "승인된 Teams 기본6표현/기존AdaptiveCard 정규화재사용·원본/양식응답·전송크기 경계검증"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_slack.py",
+    "stage": "C04",
+    "reason": "승인계획 Slack Socket Mode의 고정 API·검증 workspace/bot/app/channel·목적지·결과불명 경계 및 합성시험"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_slack.py",
+    "stage": "C04",
+    "reason": "승인계획 Slack Socket Mode의 고정 API·검증 workspace/bot/app/channel·목적지·결과불명 경계 및 합성시험"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_slack_runtime.py",
+    "stage": "C04",
+    "reason": "승인 Slack Socket→기존방/큐→SDK→대역게시·중복/공유/카드/복구/격리 실제QA DB회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_discord.py",
+    "stage": "C05",
+    "reason": "승인 Discord 고정 Bot API·앱/서버/채널·부모스레드/멤버/권한 검증과 합성회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_discord.py",
+    "stage": "C05",
+    "reason": "승인 Discord 고정 Bot API·앱/서버/채널·부모스레드/멤버/권한 검증과 합성회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_discord_gateway.py",
+    "stage": "C05",
+    "reason": "승인 Discord Gateway/암호화cursor/ACK확정전실행gate·기존방과원장재사용 및 대역/실제QA DB 회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_discord_state.py",
+    "stage": "C05",
+    "reason": "승인 Discord Gateway/암호화cursor/ACK확정전실행gate·기존방과원장재사용 및 대역/실제QA DB 회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_discord_gateway.py",
+    "stage": "C05",
+    "reason": "승인 Discord Gateway/암호화cursor/ACK확정전실행gate·기존방과원장재사용 및 대역/실제QA DB 회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_discord_runtime.py",
+    "stage": "C05",
+    "reason": "승인 Discord Gateway/암호화cursor/ACK확정전실행gate·기존방과원장재사용 및 대역/실제QA DB 회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_telegram.py",
+    "stage": "C06",
+    "reason": "승인 Telegram 고정BotAPI/getMe/기존webhook보존/채팅권한·신원/longpoll·게시메서드 검증 및 대역회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_telegram.py",
+    "stage": "C06",
+    "reason": "승인 Telegram 고정BotAPI/getMe/기존webhook보존/채팅권한·신원/longpoll·게시메서드 검증 및 대역회귀; 독립I1 별도승인 수신요청DB시각-24h 발생하한·poll시간여유/시각검증"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_telegram_polling.py",
+    "stage": "C06",
+    "reason": "승인 Telegram long polling/보호offset·세대별cutoff/ACK확정전gate·기존방/큐/원장재사용 및 실제QA DB대역회귀; 별도승인 장기유휴offset0·보호commit시각/epoch/감사·기존UNKNOWN보존 회귀; 독립I1 별도승인 수신요청DB시각-24h 발생하한·poll시간여유/시각검증"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_telegram_state.py",
+    "stage": "C06",
+    "reason": "승인 Telegram long polling/보호offset·세대별cutoff/ACK확정전gate·기존방/큐/원장재사용 및 실제QA DB대역회귀; 별도승인 장기유휴offset0·보호commit시각/epoch/감사·기존UNKNOWN보존 회귀; 독립I1 별도승인 수신요청DB시각-24h 발생하한·poll시간여유/시각검증"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_telegram_runtime.py",
+    "stage": "C06",
+    "reason": "승인 Telegram long polling/보호offset·세대별cutoff/ACK확정전gate·기존방/큐/원장재사용 및 실제QA DB대역회귀; 별도승인 장기유휴offset0·보호commit시각/epoch/감사·기존UNKNOWN보존 회귀; 독립I1 별도승인 수신요청DB시각-24h 발생하한·poll시간여유/시각검증"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_google_chat_auth.py",
+    "stage": "C07",
+    "reason": "승인C07 독립순수 Google Chat Project Number JWT/고정공개인증서·issuer/audience/시각 검증; 수신등록·실키·외부호출없음"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_google_chat_auth.py",
+    "stage": "C07",
+    "reason": "승인C07 독립순수 Google Chat Project Number JWT/고정공개인증서·issuer/audience/시각 검증; 수신등록·실키·외부호출없음"
+  },
+  {
+    "path": "scripts/security/public_repo_policy.py",
+    "stage": "C07",
+    "reason": "별도승인 Google 공식공개issuer 정확1개만허용·타이메일/유사/혼합거부 회귀"
+  },
+  {
+    "path": "apps/api/tests/test_public_repo_policy.py",
+    "stage": "C07",
+    "reason": "별도승인 Google 공식공개issuer 정확1개만허용·타이메일/유사/혼합거부 회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_google_chat.py",
+    "stage": "C07",
+    "reason": "승인 Google Chat 고정OAuth/앱·공간귀속·첫인증수신/보호proof·원장commit ACK/기존Q&A/대상별게시·중복/UNKNOWN/경합 회귀·별도승인 프로젝트읽기/최소scope/게시sender/재시작신원오류·접수기준보완"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_google_chat.py",
+    "stage": "C07",
+    "reason": "승인 Google Chat 고정OAuth/앱·공간귀속·첫인증수신/보호proof·원장commit ACK/기존Q&A/대상별게시·중복/UNKNOWN/경합 회귀·별도승인 프로젝트읽기/최소scope/게시sender/재시작신원오류·접수기준보완"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_google_chat_runtime.py",
+    "stage": "C07",
+    "reason": "승인 Google Chat 고정OAuth/앱·공간귀속·첫인증수신/보호proof·원장commit ACK/기존Q&A/대상별게시·중복/UNKNOWN/경합 회귀·별도승인 프로젝트읽기/최소scope/게시sender/재시작신원오류·접수기준보완"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_google_chat_route.py",
+    "stage": "C07",
+    "reason": "승인 Google Chat 고정OAuth/앱·공간귀속·첫인증수신/보호proof·원장commit ACK/기존Q&A/대상별게시·중복/UNKNOWN/경합 회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_google_chat_identity.py",
+    "stage": "C07",
+    "reason": "별도승인 프로젝트읽기 신원검증·지원불가 자기멤버십 대체/권한없음·프로젝트ID번호혼용·고정주소/최소scope 회귀"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_line_auth.py",
+    "stage": "C08",
+    "reason": "승인계획 LINE 독립순수 HMAC 원문 서명검증·변조/오서명/입력한도 거부시험; 공개route/실키/외부호출 없음"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_line_auth.py",
+    "stage": "C08",
+    "reason": "승인계획 LINE 독립순수 HMAC 원문 서명검증·변조/오서명/입력한도 거부시험; 공개route/실키/외부호출 없음"
+  },
+  {
+    "path": "apps/api/app/services/channel_connection_line.py",
+    "stage": "C08",
+    "reason": "별도승인 LINE 고정Bot info/원문서명·대상proof·원장commit ACK·기존방/큐/Q&A·암호화reply 단일회신/기한/중복/UNKNOWN·회귀·공식숫자reply ID정밀도보존/동일봇eventID복합변조원자거부 회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_line.py",
+    "stage": "C08",
+    "reason": "별도승인 LINE 고정Bot info/원문서명·대상proof·원장commit ACK·기존방/큐/Q&A·암호화reply 단일회신/기한/중복/UNKNOWN·회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_line_route.py",
+    "stage": "C08",
+    "reason": "별도승인 LINE 고정Bot info/원문서명·대상proof·원장commit ACK·기존방/큐/Q&A·암호화reply 단일회신/기한/중복/UNKNOWN·회귀"
+  },
+  {
+    "path": "apps/api/tests/test_channel_connection_line_runtime.py",
+    "stage": "C08",
+    "reason": "별도승인 LINE 고정Bot info/원문서명·대상proof·원장commit ACK·기존방/큐/Q&A·암호화reply 단일회신/기한/중복/UNKNOWN·회귀·공식숫자reply ID정밀도보존/동일봇eventID복합변조원자거부 회귀"
+  },
+  {
+    "path": "apps/web/lib/api-assets.ts",
+    "stage": "API_UPLOAD_FIX",
+    "reason": "사용자 API업로드결함수정: API자산UUID 생성만 HTTP암호학적난수호환/기존키·ID보존회귀"
+  },
+  {
+    "path": "apps/web/components/group-api-list-page.tsx",
+    "stage": "API_UPLOAD_FIX",
+    "reason": "사용자 API업로드결함수정: API자산UUID 생성만 HTTP암호학적난수호환/기존키·ID보존회귀"
+  },
+  {
+    "path": "apps/web/components/api-store-list-page.tsx",
+    "stage": "API_UPLOAD_FIX",
+    "reason": "사용자 API업로드결함수정: API자산UUID 생성만 HTTP암호학적난수호환/기존키·ID보존회귀"
+  },
+  {
+    "path": "apps/web/components/api-upload-http.test.mjs",
+    "stage": "API_UPLOAD_FIX",
+    "reason": "사용자 API업로드결함수정: API자산UUID 생성만 HTTP암호학적난수호환/기존키·ID보존회귀"
+  },
+  {
+    "path": "apps/web/components/studio-rail.tsx",
+    "stage": "HELP_MANUALS",
+    "reason": "신산님 직접 요청: 기존 도움말/3 PDF·체험 보존, CGA-alone 보충 매뉴얼 2종 웹 열람과 원문 일치 검증"
+  },
+  {
+    "path": "docs/manual/build_web_manuals.py",
+    "stage": "HELP_MANUALS",
+    "reason": "신산님 직접 요청: 기존 도움말/3 PDF·체험 보존, CGA-alone 보충 매뉴얼 2종 웹 열람과 원문 일치 검증"
+  },
+  {
+    "path": "scripts/tests/test_help_manuals.py",
+    "stage": "HELP_MANUALS",
+    "reason": "신산님 직접 요청: 기존 도움말/3 PDF·체험 보존, CGA-alone 보충 매뉴얼 2종 웹 열람과 원문 일치 검증"
+  },
+  {
+    "path": "apps/web/public/manuals/cga-alone-guide-ko.html",
+    "stage": "HELP_MANUALS",
+    "reason": "신산님 직접 요청: 기존 도움말/3 PDF·체험 보존, CGA-alone 보충 매뉴얼 2종 웹 열람과 원문 일치 검증"
+  },
+  {
+    "path": "apps/web/public/manuals/channel-connections-ko.html",
+    "stage": "HELP_MANUALS",
+    "reason": "신산님 직접 요청: 기존 도움말/3 PDF·체험 보존, CGA-alone 보충 매뉴얼 2종 웹 열람과 원문 일치 검증"
+  },
+  {
+    "path": "apps/web/components/bot-create-limit.test.mjs",
+    "stage": "BOT_CREATE_LIMIT",
+    "reason": "신산님 직접 요청: 기존봇 자동이동 제거·생성화면 제한안내 및 기존 생성차단 회귀시험"
+  },
+  {
+    "path": "apps/web/lib/i18n/bot-create.ts",
+    "stage": "BOT_CREATE_LIMIT",
+    "reason": "신산님 승인: 생성 화면을 유지하며 사용자당1봇 추가생성 제한 사유를 기존7언어로 안내"
+  },
+  {
+    "path": "README.de.md",
+    "stage": "STUDIO_PORT_5173",
+    "reason": "사용자요청외부포트5173에맞춰기존설치/health/접속URL안내수정"
+  },
+  {
+    "path": "README.en.md",
+    "stage": "STUDIO_PORT_5173",
+    "reason": "사용자요청외부포트5173에맞춰기존설치/health/접속URL안내수정"
+  },
+  {
+    "path": "README.fr.md",
+    "stage": "STUDIO_PORT_5173",
+    "reason": "사용자요청외부포트5173에맞춰기존설치/health/접속URL안내수정"
+  },
+  {
+    "path": "README.ja.md",
+    "stage": "STUDIO_PORT_5173",
+    "reason": "사용자요청외부포트5173에맞춰기존설치/health/접속URL안내수정"
+  },
+  {
+    "path": "README.md",
+    "stage": "STUDIO_PORT_5173",
+    "reason": "사용자요청외부포트5173에맞춰기존설치/health/접속URL안내수정"
+  },
+  {
+    "path": "README.vi.md",
+    "stage": "STUDIO_PORT_5173",
+    "reason": "사용자요청외부포트5173에맞춰기존설치/health/접속URL안내수정"
+  },
+  {
+    "path": "README.zh-CN.md",
+    "stage": "STUDIO_PORT_5173",
+    "reason": "사용자요청외부포트5173에맞춰기존설치/health/접속URL안내수정"
+  },
+  {
+    "path": "apps/web/Dockerfile",
+    "stage": "DAON_SERVER_DEPLOY",
+    "reason": "신산님 직접 지시: studio 내부포트5173으로 EXPOSE/CMD 최소 변경"
   },
   {
     "path": "apps/api/tests/cga_alone/persistent_llm_qa_server.py",

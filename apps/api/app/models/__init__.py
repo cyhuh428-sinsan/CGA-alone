@@ -1,3 +1,5 @@
+from app.models.channel_connection_runtime import ChannelInstallationLease, ChannelConnectionRoom, ChannelConnectionDelivery
+from app.models.channel_connection import ChannelConnection
 from app.models.base import Base
 from app.models.access_control import (
     Group,
@@ -29,6 +31,10 @@ __all__ = [
     "ChannelLlmVersionGuard",
     "LlmBudgetAccount",
     "LlmBudgetReservation",
+    "ChannelInstallationLease",
+    "ChannelConnectionRoom",
+    "ChannelConnectionDelivery",
+    "ChannelConnection",
     "ChannelMessage",
     "ChannelQueueEvent",
     "ChannelRoom",

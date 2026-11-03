@@ -32,7 +32,7 @@ from app.core.version_storage import (
     build_version_dialog_flow_graph_rows,
     sync_version_dialog_split_tables,
 )
-from app.models import AdminChannel, AdminDefaultMessage, AdminLicense, AdminTemplate, AuditLog, Bot, BotVersion, ChannelMessage, ChannelQueueEvent, ChannelRoom, CommonVariable, EditLock, Group, Organization, Role, SignupRequest, User, UserRole, VersionDialogAsset, VersionDialogFlowGraph
+from app.models import AdminChannel, ChannelConnection, AdminDefaultMessage, AdminLicense, AdminTemplate, AuditLog, Bot, BotVersion, ChannelMessage, ChannelQueueEvent, ChannelRoom, CommonVariable, EditLock, Group, Organization, Role, SignupRequest, User, UserRole, VersionDialogAsset, VersionDialogFlowGraph
 from app.services.version_pins import lock_registered_projection
 from app.services.license_policy import assert_license_allows_creation, get_license_usage_counts, get_license_warnings
 from app.services.nlu.deep_learning_lite import get_ml_acceleration_status
@@ -903,6 +903,11 @@ def _template_renderer_issues(
             return ["카카오 템플릿은 simple-text, quick-reply, basic-card, list-card, carousel만 지원합니다."]
         return []
 
+    if normalized_channel_code in {"SLACK", "DISCORD", "TELEGRAM", "GOOGLE_CHAT", "LINE"}:
+        if normalized_renderer_type not in {"text", "button", "card", "table", "link-button", "carousel"}:
+            return [f"{'LINE' if normalized_channel_code == 'LINE' else 'Google Chat' if normalized_channel_code == 'GOOGLE_CHAT' else 'Telegram' if normalized_channel_code == 'TELEGRAM' else 'Discord' if normalized_channel_code == 'DISCORD' else 'Slack'} 템플릿은 text, button, card, table, link-button, carousel만 지원합니다."]
+        return []
+
     if normalized_renderer_type in {"simple-text", "quick-reply", "basic-card", "list-card"}:
         return ["카카오 전용 템플릿은 KAKAO 채널에서만 사용할 수 있습니다."]
 
@@ -1651,6 +1656,8 @@ def _serialize_default_message(message: AdminDefaultMessage, updater_name: str) 
     )
 
 def _ensure_default_admin_channels(db: Session, organization: Organization) -> None:
+    # 채널/템플릿의 첫 동시 조회는 해당 조직의 기존 transaction 안에서만 직렬화한다.
+    db.execute(select(Organization.id).where(Organization.id == organization.id).with_for_update()).scalar_one()
     for item in DEFAULT_ADMIN_CHANNELS:
         existing = db.scalar(
             select(AdminChannel).where(
@@ -6137,10 +6144,14 @@ def update_admin_channel(
         select(AdminChannel).where(
             AdminChannel.id == channel_id,
             AdminChannel.deleted_at.is_(None),
-        )
+        ).with_for_update()
     )
     if channel is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="채널을 찾을 수 없습니다.")
+
+    child_exists = db.scalar(select(ChannelConnection.id).where(ChannelConnection.channel_id == channel.id, ChannelConnection.deleted_at.is_(None)).limit(1))
+    if child_exists and (payload.provider != (channel.data_json or {}).get("provider") or payload.status != channel.status):
+        raise HTTPException(status_code=409, detail="연결 대상을 먼저 해제·삭제한 뒤 채널 종류·사용 여부를 변경하세요.")
 
     before_json = channel.data_json or {}
     channel.name = payload.name.strip()
@@ -6184,10 +6195,14 @@ def delete_admin_channel(
         select(AdminChannel).where(
             AdminChannel.id == channel_id,
             AdminChannel.deleted_at.is_(None),
-        )
+        ).with_for_update()
     )
     if channel is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="채널을 찾을 수 없습니다.")
+
+    child_exists = db.scalar(select(ChannelConnection.id).where(ChannelConnection.channel_id == channel.id, ChannelConnection.deleted_at.is_(None)).limit(1))
+    if child_exists:
+        raise HTTPException(status_code=409, detail="연결 대상을 먼저 해제·삭제한 뒤 채널을 삭제하세요.")
 
     channel.deleted_at = datetime.now(timezone.utc)
     channel.updated_by = current_user.id

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from app.services.secondary_llm import SecondaryOutcome, run_secondary_module, resume_secondary_outcome, capture_secondary_terminal_result
+
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
 from io import BytesIO
 from copy import deepcopy
 import random
@@ -8,7 +12,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -36,7 +40,7 @@ from app.services.hub_runtime import (
     resolve_hub_member,
 )
 from app.services.default_messages import DEFAULT_MESSAGE_FALLBACKS, get_default_message_text
-from app.services.bot_ai_policy import runtime_block_reason
+from app.services.bot_ai_policy import runtime_block_reason, secondary_llm_block_reason
 from app.services.llm_client import LlmChatClient, LlmClientError, resolve_llm_provider_config
 from app.services.llm_nlu import classify_intent_with_llm_snapshot
 from app.services.nlu.deep_learning_lite import classify_deep_learning_lite_model, score_deep_learning_lite_model
@@ -56,7 +60,7 @@ from app.services.vector_search import (
 
 router = APIRouter(prefix="/channels", tags=["channels"])
 logger = get_logger("aidot.channels")
-SUPPORTED_CHANNELS = {"webchat", "kakao", "ms-teams"}
+SUPPORTED_CHANNELS = {"webchat", "kakao", "ms-teams", "slack", "discord", "telegram", "google-chat", "line"}
 NON_CHANNEL_QUEUE_TYPES = {"training"}
 DEFAULT_LLM_ANSWER_SYSTEM_PROMPT = "사용자 질문에 답변한다."
 LLM_RAG_ANSWER_SAFETY_PROMPT = (
@@ -76,6 +80,8 @@ class ChannelConnectRequest(BaseModel):
 
 
 class ChannelRoomCreateRequest(BaseModel):
+    room_mode: Literal["private", "shared"] | None = None
+    participant_kind: Literal["user", "bot"] = "user"
     bot_id: str = Field(min_length=1, max_length=150)
     client_room_id: str | None = Field(default=None, max_length=150)
     participant_id: str | None = Field(default="visitor", max_length=120)
@@ -86,6 +92,7 @@ class ChannelRoomCreateRequest(BaseModel):
 
 
 class ChannelMessageRequest(BaseModel):
+    addressed: bool | None = None
     message: str = Field(min_length=1, max_length=4000)
     participant_id: str | None = Field(default="visitor", max_length=120)
     source_talk_node_id: str | None = Field(default=None, max_length=120)
@@ -95,6 +102,11 @@ class ChannelMessageRequest(BaseModel):
     system_name: str | None = Field(default=None, max_length=150)
     direct_dialog_root: bool = False
     language: str | None = Field(default=None, max_length=35)
+
+
+class ChannelParticipantRequest(BaseModel):
+    participant_name: str = Field(default="사용자", min_length=1, max_length=120)
+    participant_kind: Literal["user", "bot"] = "user"
 
 
 class KakaoWebhookRequest(BaseModel):
@@ -750,6 +762,14 @@ def _channel_health_summary() -> list[dict[str, Any]]:
             "channel": channel,
             "status": "ok",
         }
+        if channel == "line":
+            item.update({"provider": "line", "renderer": "shared-sdk", "supported_outputs": ["text", "flex"]})
+        if channel == "google-chat":
+            item.update({"provider": "google-chat", "renderer": "shared-sdk", "supported_outputs": ["text", "cardsV2"]})
+        if channel == "telegram":
+            item.update({"provider": "telegram", "renderer": "shared-sdk", "supported_outputs": ["sendMessage", "sendPhoto", "inline_keyboard"]})
+        if channel == "discord":
+            item.update({"provider": "discord", "renderer": "shared-sdk", "supported_outputs": ["content", "embeds", "components"]})
         if channel == "kakao":
             item.update(
                 {
@@ -782,9 +802,100 @@ def _is_persistent_room(db: Session, room_id: UUID | None) -> bool:
     return db.scalar(select(ChannelLlmBinding.id).where(ChannelLlmBinding.room_id == room_id).limit(1)) is not None
 
 
+
+# Webchat 자격 증명을 검증한 서버 호출 범위에서만 한 방을 허용한다.
+_webchat_room_capability: ContextVar[UUID | None] = ContextVar("webchat_room_capability", default=None)
+
+
+# 검증된 공유방 참가자에 대해서만 사용하는 서버 내부 실행 권한이다.
+_shared_turn_capability: ContextVar[dict | None] = ContextVar("shared_turn_capability", default=None)
+
+
+@contextmanager
+def _shared_room_turn_access(room_id, actor_id, generation, participant_name, participant_kind="user"):
+    context = {"room_id": room_id, "actor_id": actor_id, "generation": generation,
+        "participant_name": participant_name, "participant_kind": participant_kind, "fenced": False, "protected": {}, "queue_event_id": None, "lease_lost": False}
+    token = _shared_turn_capability.set(context)
+    try:
+        yield context
+    finally:
+        _shared_turn_capability.reset(token)
+
+
+@contextmanager
+def _shared_room_execution_db(db):
+    previous = db.expire_on_commit
+    if _shared_turn_capability.get() is not None:
+        db.expire_on_commit = False
+    try:
+        yield
+    finally:
+        db.expire_on_commit = previous
+
+
+def _fence_shared_room_write(db, room):
+    context = _shared_turn_capability.get()
+    if context is None or context["room_id"] != room.id:
+        return
+    from app.services.room_turn import lock_current_room_turn
+    candidate = _as_dict(room.metadata_json)
+    if context["lease_lost"]:
+        raise HTTPException(status_code=409, detail="질문 차례가 만료되어 이전 결과를 저장하지 않았습니다.")
+    if not context["fenced"]:
+        with db.no_autoflush:
+            current = lock_current_room_turn(db, room.id, context["actor_id"], context["generation"])
+        if current is None:
+            raise HTTPException(status_code=409, detail="질문 차례가 변경되어 이전 결과를 저장하지 않았습니다.")
+        context["protected"] = {key: deepcopy(current.metadata_json[key]) for key in ("__webchatAccess", "__roomTurn", "__clientEvents") if key in _as_dict(current.metadata_json)}
+        # 외부 응답 중 저장된 일반 대화의 이력은 최신 DB를 유지한다.
+        history = deepcopy(_as_dict(candidate.get("conversationHistory")))
+        latest_history = _as_dict(_as_dict(current.metadata_json).get("conversationHistory"))
+        for key in ("message_count", "user_message_count", "transcript", "last_message_at", "last_user_message_at",
+                    "started_at", "user_utterances", "user_raw_utterances", "first_user_utterance"):
+            if key in latest_history:
+                history[key] = deepcopy(latest_history[key])
+        if history:
+            candidate["conversationHistory"] = history
+        context["fenced"] = True
+    candidate.update(deepcopy(context["protected"]))
+    written_history = context.get("written_history")
+    if written_history is not None:
+        history = _as_dict(candidate.get("conversationHistory"))
+        for key in ("message_count", "user_message_count", "transcript", "last_message_at", "last_user_message_at",
+                    "started_at", "user_utterances", "user_raw_utterances", "first_user_utterance"):
+            if key in written_history:
+                history[key] = deepcopy(written_history[key])
+        candidate["conversationHistory"] = history
+    room.metadata_json = candidate
+    flag_modified(room, "metadata_json")
+
+
+def _is_credential_room(room: ChannelRoom) -> bool:
+    return str(getattr(room, "client_room_id", None) or "").startswith("wc-auth:") or "__webchatAccess" in _as_dict(getattr(room, "metadata_json", None))
+
+
+def _credential_room_ids():
+    return select(ChannelRoom.id).where(
+        ChannelRoom.client_room_id.like("wc-auth:%") | ChannelRoom.metadata_json.has_key("__webchatAccess")
+    )
+
+
+@contextmanager
+def _webchat_room_access(room_id: UUID):
+    token = _webchat_room_capability.set(room_id)
+    try:
+        yield
+    finally:
+        _webchat_room_capability.reset(token)
+
+
 def _assert_legacy_room_access(db: Session, room_id: UUID | None) -> None:
     if _is_persistent_room(db, room_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="채팅방을 찾을 수 없습니다.")
+    room = db.get(ChannelRoom, room_id) if room_id else None
+    if room is not None and _is_credential_room(room):
+        if _webchat_room_capability.get() != room.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="채팅방을 찾을 수 없습니다.")
 
 
 def _verify_channel_key(api_key: str | None) -> None:
@@ -1453,6 +1564,8 @@ def _channel_admin_code(channel_type: str | None) -> str:
         "webchat": "WEBCHAT",
         "kakao": "KAKAO",
         "ms-teams": "TEAMS",
+        "google-chat": "GOOGLE_CHAT",
+        "line": "LINE",
     }.get(normalized, normalized.upper())
 
 
@@ -1796,7 +1909,10 @@ def _runtime_block_reason(bot: Bot, version: BotVersion) -> str | None:
     diagnostics = scenario_validation_from_version(version.version_json)
     if int(diagnostics.get("error_count") or 0) > 0:
         return scenario_validation_block_reason(diagnostics)
-    return None
+    return secondary_llm_block_reason(
+        version.version_json, _version_ai_config(bot, version),
+        bot_kind=str((bot.data_json or {}).get("bot_kind") or "bot"),
+    )
 
 
 def _ensure_runtime_supported(bot: Bot, version: BotVersion) -> None:
@@ -1992,7 +2108,7 @@ def _initial_runtime_state_for_version(bot: Bot, version: BotVersion, channel_ty
         )
         graph = _find_graph(document, dialog_id=str((greeting_dialog or {}).get("id") or ""), name=value)
 
-    if graph is None:
+    if graph is None and (_as_dict(bot.data_json).get("bot_kind") == "hub" or not isinstance(_version_ai_config(bot, version).get("secondary_llm"), dict)):
         graph = next((item for item in _as_list(document.get("dialog_flow_graphs")) if isinstance(item, dict)), None)
     if graph is None:
         state = {"variables": {}, "__beforeSessionEndModule": before_session_end_module}
@@ -2373,6 +2489,8 @@ def _channel_template_code(channel_type: str | None) -> str:
         "webchat": "WEBCHAT",
         "kakao": "KAKAO",
         "ms-teams": "TEAMS",
+        "google-chat": "GOOGLE_CHAT",
+        "line": "LINE",
     }.get(normalized, normalized.upper())
 
 
@@ -2496,7 +2614,8 @@ def _talk_output(
     response_type = str(config.get("responseType") or "none")
     text = _render_text(_first_text(config.get("basicMessages")), variables, state, graph, node)
     messages = [_render_text(str(item or ""), variables, state, graph, node).strip() for item in _as_list(config.get("messages"))]
-    options = [item for item in messages if item]
+    # Slack/Discord/Telegram/Google Chat 카드의 선택사항은 빈 값도 고정 위치를 유지한다. 기존 채널은 원본 처리를 보존한다.
+    options = messages if channel_code.upper() in {"SLACK", "DISCORD", "TELEGRAM", "GOOGLE_CHAT", "LINE"} and message_type in {"card", "carousel"} else [item for item in messages if item]
 
     if message_type == "button":
         if not text and not options:
@@ -3193,6 +3312,8 @@ def _run_runtime(
                 data={"endSessionImmediately": end_immediately},
             )
             _log_runtime_event(item)
+            if end_immediately:
+                capture_secondary_terminal_result(state)
             apply_end_card_state(state, end_session_immediately=end_immediately)
             return outputs, state
 
@@ -3679,7 +3800,14 @@ def _add_message(
     text: str,
     message_type: str = "text",
     payload_json: dict[str, Any] | None = None,
+    *, questioner: bool = False,
 ) -> ChannelMessage:
+    _fence_shared_room_write(db, room)
+    context = _shared_turn_capability.get()
+    if context is not None and context["room_id"] == room.id and participant_id == context["actor_id"] and participant_kind == "user":
+        participant_kind = context.get("participant_kind", "user")
+        participant_name = context["participant_name"]
+        questioner = True
     created_at = datetime.now(timezone.utc)
     message = ChannelMessage(
         room_id=room.id,
@@ -3693,7 +3821,10 @@ def _add_message(
         created_at=created_at,
     )
     db.add(message)
-    _update_room_conversation_history_for_message(room, message)
+    _update_room_conversation_history_for_message(room, message, questioner=questioner)
+    context = _shared_turn_capability.get()
+    if context is not None and context["room_id"] == room.id:
+        context["written_history"] = deepcopy(_as_dict(room.metadata_json).get("conversationHistory"))
     flag_modified(room, "metadata_json")
     db.add(room)
     return message
@@ -4017,7 +4148,7 @@ def _append_room_conversation_transcript(history: dict[str, Any], message: Chann
     return display_text
 
 
-def _update_room_conversation_history_for_message(room: ChannelRoom, message: ChannelMessage) -> None:
+def _update_room_conversation_history_for_message(room: ChannelRoom, message: ChannelMessage, *, questioner: bool = False) -> None:
     _, history = _room_conversation_history(room)
     created_at = message.created_at or datetime.now(timezone.utc)
     history["room_status"] = room.status
@@ -4027,7 +4158,7 @@ def _update_room_conversation_history_for_message(room: ChannelRoom, message: Ch
     history["last_message_at"] = created_at.isoformat()
     history["message_count"] = int(history.get("message_count") or 0) + 1
     display_text = _append_room_conversation_transcript(history, message, created_at)
-    if message.participant_kind != "user":
+    if message.participant_kind != "user" and not questioner:
         return
     text = str(message.text or "").strip()
     history["last_user_message_at"] = created_at.isoformat()
@@ -4146,6 +4277,11 @@ def _apply_active_version_to_room(
         },
     )
     _log_runtime_event(item)
+    credential = _as_dict(room.metadata_json).get("__webchatAccess")
+    if isinstance(credential, dict):
+        runtime_state["__webchatAccess"] = deepcopy(credential)
+    if "__clientEvents" in _as_dict(room.metadata_json):
+        runtime_state["__clientEvents"] = deepcopy(room.metadata_json["__clientEvents"])
     room.metadata_json = runtime_state
     if hasattr(room, "_sa_instance_state"):
         flag_modified(room, "metadata_json")
@@ -4522,6 +4658,8 @@ def _select_dialog_for_bot(
         try:
             return with_cutoff(_semantic_select_dialog(document, bot, version, message))
         except VectorSearchError as error:
+            if isinstance(data_json.get("secondary_llm"), dict) and _as_dict(bot.data_json).get("bot_kind") != "hub":
+                raise
             logger.warning(
                 "Semantic vector intent search failed.",
                 extra={
@@ -5063,8 +5201,13 @@ def _run_named_module(
     module_name: str | None,
     default_messages: dict[str, str],
     channel_code: str,
+    *, module_id_only: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, Any], bool]:
-    module_graph = _graph_for_module_name(document, module_name)
+    if module_id_only:
+        dialog = next((d for d in _as_list(document.get("dialogs")) if isinstance(d, dict) and str(d.get("id") or "") == module_name and d.get("dialogType") in (0, "0")), None)
+        module_graph = _graph_for_dialog(document, dialog) if dialog else None
+    else:
+        module_graph = _graph_for_module_name(document, module_name)
     if module_graph is None:
         return [], state, False
     variables = _as_dict(state.get("variables"))
@@ -5093,12 +5236,16 @@ def _handle_intent_not_found(
     version: BotVersion,
     default_messages: dict[str, str],
     channel_code: str,
+    *, excluded_module_id: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any], bool]:
     settings = _intent_detection_settings(bot, version)
     retry_count = max(1, _int_setting(settings.get("retryCount"), 2))
     current_count = _int_setting(state.get("intentFallbackCount"), 0) + 1
     state["intentFallbackCount"] = current_count
     if current_count < retry_count:
+        return [], state, False
+    excluded = next((d for d in _as_list(document.get("dialogs")) if isinstance(d, dict) and str(d.get("id") or "") == excluded_module_id), {})
+    if excluded_module_id and str(settings.get("overflowModule") or "") in {str(excluded.get(k) or "") for k in ("id", "name", "displayName", "dialogKey")} - {""}:
         return [], state, False
     outputs, next_state, ran = _run_named_module(
         document,
@@ -5110,6 +5257,39 @@ def _handle_intent_not_found(
     if ran:
         next_state["intentFallbackCount"] = 0
     return outputs, next_state, ran
+
+
+
+def _apply_secondary_runtime_result(document, result, bot, version, default_messages, channel_code, module_id):
+    state = result.state
+    item = _append_runtime_event(state, level="info", event="channel.runtime.secondary_result", message="2차 모듈 실행 결과를 판정했습니다.", data={"status": result.status, "moduleId": module_id})
+    _log_runtime_event(item)
+    if result.status == "unrecognized":
+        outputs, state, _ = _handle_intent_not_found(document, state, bot, version, default_messages, channel_code, excluded_module_id=module_id)
+        return SecondaryOutcome("unrecognized", outputs, state)
+    if result.status == "error":
+        state.update(waitingNodeId="", currentNodeId="", dialogEnded=True)
+        return SecondaryOutcome("error", [_runtime_system_error_output(default_messages)], state)
+    if result.status == "answered":
+        state["intentFallbackCount"] = 0
+    return result
+
+
+def _handle_local_intent_miss(document, state, bot, version, default_messages, channel_code):
+    config = _version_ai_config(bot, version).get("secondary_llm")
+    if not isinstance(config, dict) or _as_dict(bot.data_json).get("bot_kind") == "hub":
+        outputs, state, _ = _handle_intent_not_found(document, state, bot, version, default_messages, channel_code)
+        return SecondaryOutcome("unrecognized", outputs, state)
+    def run_module(*args):
+        return _run_named_module(*args, module_id_only=True)
+    result = run_secondary_module(document, state, config, run_module=run_module, default_messages=default_messages, channel_code=channel_code)
+    return _apply_secondary_runtime_result(document, result, bot, version, default_messages, channel_code, config.get("module_id"))
+
+
+def _finish_secondary_runtime(document, state, bot, version, outputs, default_messages, channel_code):
+    config = _as_dict(_as_dict(state.get("__secondaryLlm")).get("config"))
+    result = resume_secondary_outcome(state, outputs)
+    return _apply_secondary_runtime_result(document, result, bot, version, default_messages, channel_code, config.get("module_id"))
 
 
 def _handle_pre_nlu_settings(
@@ -5268,6 +5448,8 @@ def _process_channel_queue_event(
         message=payload.message,
     )
     runtime_state_after = runtime_state_before
+    continuing_secondary = bool(runtime_state_before.get("__secondaryLlm"))
+    secondary_handled = False
     selected_dialog = None
     score = 0.0
     bot_messages: list[ChannelMessage] = []
@@ -5591,6 +5773,12 @@ def _process_channel_queue_event(
                     channel_code,
                     _button_selection_option(bot, version),
                 )
+        if continuing_secondary:
+            secondary_result = _finish_secondary_runtime(document, runtime_state, bot, version, runtime_outputs, default_messages, channel_code)
+            runtime_outputs, runtime_state = secondary_result.outputs, secondary_result.state
+            secondary_handled = secondary_result.status != "unrecognized"
+            if secondary_result.status == "unrecognized" and not runtime_outputs:
+                runtime_outputs = [{"type": "text", "text": _reply_for_dialog(db, bot, None, room_languages), "options": []}]
         runtime_state_after = runtime_state
         room.metadata_json = runtime_state
         flag_modified(room, "metadata_json")
@@ -5609,7 +5797,7 @@ def _process_channel_queue_event(
                         payload_json={"options": output.get("options") or [], **_as_dict(output.get("payload"))},
                     )
                 )
-        elif (not interrupted_intent_transition) and _should_run_intent_fallback(
+        elif (not continuing_secondary) and (not interrupted_intent_transition) and _should_run_intent_fallback(
             runtime_outputs,
             form_response_handled,
             bool(runtime_state_before.get("waitingNodeId")),
@@ -5681,7 +5869,9 @@ def _process_channel_queue_event(
                     intent_outputs, runtime_state = _run_runtime(document, runtime_state, start_node_id, default_messages, channel_code)
                     runtime_state_after = runtime_state
             elif not handled_pre_nlu:
-                overflow_outputs, runtime_state, ran_overflow = _handle_intent_not_found(
+                runtime_state["variables"] = dict(_as_dict(runtime_state.get("variables")))
+                _set_variable(runtime_state["variables"], "$input", payload.message)
+                secondary_result = _handle_local_intent_miss(
                     document,
                     runtime_state,
                     bot,
@@ -5689,9 +5879,9 @@ def _process_channel_queue_event(
                     default_messages,
                     channel_code,
                 )
-                if ran_overflow:
-                    intent_outputs = overflow_outputs
-                    runtime_state_after = runtime_state
+                intent_outputs, runtime_state = secondary_result.outputs, secondary_result.state
+                secondary_handled = secondary_result.status != "unrecognized"
+                runtime_state_after = runtime_state
 
             if intent_outputs:
                 for output in intent_outputs:
@@ -5707,7 +5897,7 @@ def _process_channel_queue_event(
                             payload_json={"options": output.get("options") or [], **_as_dict(output.get("payload"))},
                         )
                     )
-            else:
+            elif not secondary_handled:
                 bot_messages.append(
                     _add_message(
                         db,
@@ -5861,6 +6051,7 @@ def _process_channel_queue_event(
             "dialogEnded": runtime_state_after.get("dialogEnded") is True,
             "sessionEnded": runtime_state_after.get("sessionEnded") is True,
             "completionReason": runtime_completion_reason(runtime_state_after),
+                    "waitingNodeId": str(runtime_state_after.get("waitingNodeId") or "").strip() or None,
         },
     }
 
@@ -5879,6 +6070,7 @@ def _process_queued_channel_events(
         ChannelQueueEvent.channel_type.not_in(NON_CHANNEL_QUEUE_TYPES),
         ChannelQueueEvent.operation_kind == "channel",
         (ChannelQueueEvent.room_id.is_(None)) | (ChannelQueueEvent.room_id.not_in(_persistent_room_ids())),
+        (ChannelQueueEvent.room_id.is_(None)) | (ChannelQueueEvent.room_id.not_in(_credential_room_ids())),
     ]
     query = select(ChannelQueueEvent)
     if organization_id is not None:
@@ -6069,8 +6261,10 @@ def create_channel_room(
     channel = _ensure_channel(channel_type)
     channel_code = _channel_template_code(channel)
     _verify_channel_key(x_aidot_webchat_key)
+    if payload.room_mode is not None:
+        from app.api.routes import webchat
+        return webchat._create_client_room(channel, payload, request, x_aidot_webchat_key)
     with SessionLocal() as db:
-        bot, version, group = _get_active_bot_version(db, payload.bot_id, channel)
         existing_room = None
         if payload.client_room_id:
             existing_room = db.scalar(
@@ -6080,6 +6274,9 @@ def create_channel_room(
                     ChannelRoom.deleted_at.is_(None),
                 )
             )
+        if existing_room is not None:
+            _assert_legacy_room_access(db, existing_room.id)
+        bot, version, group = _get_active_bot_version(db, payload.bot_id, channel)
         request_languages = _message_language_candidates(
             payload.language,
             request.headers.get("accept-language"),
@@ -6087,7 +6284,6 @@ def create_channel_room(
             existing_room,
         )
         if existing_room is not None:
-            _assert_legacy_room_access(db, existing_room.id)
             existing_metadata = _as_dict(existing_room.metadata_json)
             existing_metadata["language"] = request_languages[0]
             existing_room.metadata_json = existing_metadata
@@ -6188,6 +6384,15 @@ def create_channel_room_options(channel_type: str, request: Request) -> dict[str
     channel = _ensure_channel(channel_type)
     return success_response(request, {"channelType": channel, "room": None})
 
+@router.post("/{channel_type}/rooms/{room_id}/participants")
+def join_channel_room(channel_type: str, room_id: UUID, payload: ChannelParticipantRequest, request: Request,
+    x_aidot_webchat_key: str | None = Header(default=None)):
+    from app.api.routes import webchat
+    channel = _ensure_channel(channel_type)
+    _verify_channel_key(x_aidot_webchat_key)
+    return webchat._join_client_room(channel, room_id, payload, request, x_aidot_webchat_key)
+
+
 @router.get("/{channel_type}/rooms")
 def list_channel_rooms(
     channel_type: str,
@@ -6199,7 +6404,7 @@ def list_channel_rooms(
     channel_code = _channel_template_code(channel)
     _verify_channel_key(x_aidot_webchat_key)
     with SessionLocal() as db:
-        conditions = [ChannelRoom.channel_type == channel, ChannelRoom.deleted_at.is_(None), ChannelRoom.id.not_in(_persistent_room_ids())]
+        conditions = [ChannelRoom.channel_type == channel, ChannelRoom.deleted_at.is_(None), ChannelRoom.id.not_in(_persistent_room_ids()), ChannelRoom.id.not_in(_credential_room_ids())]
         if participant_id:
             conditions.append(ChannelRoom.participant_id == participant_id)
         rooms = db.scalars(
@@ -6216,10 +6421,14 @@ def get_channel_room(
     room_id: UUID,
     request: Request,
     x_aidot_webchat_key: str | None = Header(default=None),
+    x_aidot_conversation_token: str | None = Header(default=None),
 ) -> dict[str, object]:
     channel = _ensure_channel(channel_type)
     channel_code = _channel_template_code(channel)
     _verify_channel_key(x_aidot_webchat_key)
+    if isinstance(x_aidot_conversation_token, str):
+        from app.api.routes import webchat
+        return webchat._get_client_room(channel, room_id, request, x_aidot_webchat_key, x_aidot_conversation_token)
     with SessionLocal() as db:
         _assert_legacy_room_access(db, room_id)
         room = db.scalar(
@@ -6303,11 +6512,16 @@ def create_channel_room_message(
     payload: ChannelMessageRequest,
     request: Request,
     x_aidot_webchat_key: str | None = Header(default=None),
+    x_aidot_conversation_token: str | None = Header(default=None),
+    x_aidot_event_id: str | None = Header(default=None),
 ) -> dict[str, object]:
     channel = _ensure_channel(channel_type)
     channel_code = _channel_template_code(channel)
     _verify_channel_key(x_aidot_webchat_key)
-    with SessionLocal() as db:
+    if isinstance(x_aidot_conversation_token, str):
+        from app.api.routes import webchat
+        return webchat._client_runtime_message(channel, room_id, payload, request, x_aidot_webchat_key, x_aidot_conversation_token, x_aidot_event_id if isinstance(x_aidot_event_id, str) else None)
+    with SessionLocal() as db, _shared_room_execution_db(db):
         _assert_legacy_room_access(db, room_id)
         room = db.scalar(
             select(ChannelRoom).where(
@@ -6357,7 +6571,7 @@ def create_channel_room_message(
             room,
             participant_id=payload.participant_id or room.participant_id,
             participant_kind="user",
-            participant_name=room.participant_name,
+            participant_name=(_shared_turn_capability.get() or {}).get("participant_name") or room.participant_name,
             text=payload.message,
         )
         db.flush()
@@ -6386,6 +6600,10 @@ def create_channel_room_message(
         document = normalize_version_document(version.version_json)
         default_messages = _load_default_messages(db, bot.organization_id, message_languages)
         runtime_state_before = _as_dict(room.metadata_json) or _initial_runtime_state_for_version(bot, version, room.channel_type)
+        if _shared_turn_capability.get() is not None:
+            # 이번 실행의 실제 대기를 이전 질문의 종료 flag와 분리한다.
+            runtime_state_before["dialogEnded"] = False
+            runtime_state_before["sessionEnded"] = False
         _reset_stalled_waiting_talk_state(document, runtime_state_before, channel_code)
         runtime_state_snapshot = deepcopy(runtime_state_before)
         _set_runtime_system_variables(
@@ -6394,10 +6612,12 @@ def create_channel_room_message(
             channel_code=channel_code,
             room=room,
             participant_id=payload.participant_id or room.participant_id,
-            participant_name=room.participant_name,
+            participant_name=(_shared_turn_capability.get() or {}).get("participant_name") or room.participant_name,
             message=payload.message,
         )
         runtime_state_after = runtime_state_before
+        continuing_secondary = bool(runtime_state_before.get("__secondaryLlm"))
+        secondary_handled = False
         selected_dialog = None
         score = 0.0
         bot_messages: list[ChannelMessage] = []
@@ -6409,6 +6629,19 @@ def create_channel_room_message(
             channel_code,
             None if payload.source_talk_node_id is None else str(runtime_state_before.get("waitingNodeId") or None),
         )
+
+        shared_turn = _shared_turn_capability.get()
+        if shared_turn is not None:
+            shared_turn["queue_event_id"] = queue_event.id
+            queue_event.parameter_json = {**_as_dict(queue_event.parameter_json), "sharedTurnGeneration": shared_turn["generation"]}
+            if shared_turn.get("client_event_key"):
+                queue_event.parameter_json["clientEventHash"] = shared_turn["client_event_key"]
+            flag_modified(queue_event, "parameter_json")
+            # 입력/processing을 영속화한 뒤 외부 실행 전 transaction을 종료한다.
+            db.commit()
+            shared_turn["fenced"] = False
+            shared_turn["protected"] = {}
+            shared_turn["written_history"] = None
 
         try:
             item = _append_runtime_event(
@@ -6483,6 +6716,12 @@ def create_channel_room_message(
                         channel_code,
                         _button_selection_option(bot, version),
                     )
+            if continuing_secondary:
+                secondary_result = _finish_secondary_runtime(document, runtime_state, bot, version, runtime_outputs, default_messages, channel_code)
+                runtime_outputs, runtime_state = secondary_result.outputs, secondary_result.state
+                secondary_handled = secondary_result.status != "unrecognized"
+                if secondary_result.status == "unrecognized" and not runtime_outputs:
+                    runtime_outputs = [{"type": "text", "text": _reply_for_dialog(db, bot, None, message_languages), "options": []}]
             runtime_state_after = runtime_state
             room.metadata_json = runtime_state
             flag_modified(room, "metadata_json")
@@ -6501,7 +6740,7 @@ def create_channel_room_message(
                             payload_json={"options": output.get("options") or [], **_as_dict(output.get("payload"))},
                         )
                     )
-            elif (not interrupted_intent_transition) and _should_run_intent_fallback(
+            elif (not continuing_secondary) and (not interrupted_intent_transition) and _should_run_intent_fallback(
                 runtime_outputs,
                 form_response_handled,
                 bool(runtime_state_before.get("waitingNodeId")),
@@ -6573,7 +6812,9 @@ def create_channel_room_message(
                         intent_outputs, runtime_state = _run_runtime(document, runtime_state, start_node_id, default_messages, channel_code)
                         runtime_state_after = runtime_state
                 elif not handled_pre_nlu:
-                    overflow_outputs, runtime_state, ran_overflow = _handle_intent_not_found(
+                    runtime_state["variables"] = dict(_as_dict(runtime_state.get("variables")))
+                    _set_variable(runtime_state["variables"], "$input", payload.message)
+                    secondary_result = _handle_local_intent_miss(
                         document,
                         runtime_state,
                         bot,
@@ -6581,9 +6822,9 @@ def create_channel_room_message(
                         default_messages,
                         channel_code,
                     )
-                    if ran_overflow:
-                        intent_outputs = overflow_outputs
-                        runtime_state_after = runtime_state
+                    intent_outputs, runtime_state = secondary_result.outputs, secondary_result.state
+                    secondary_handled = secondary_result.status != "unrecognized"
+                    runtime_state_after = runtime_state
 
                 if intent_outputs:
                     for output in intent_outputs:
@@ -6599,7 +6840,7 @@ def create_channel_room_message(
                                 payload_json={"options": output.get("options") or [], **_as_dict(output.get("payload"))},
                             )
                         )
-                else:
+                elif not secondary_handled:
                     reply = _reply_for_dialog(db, bot, selected_dialog, message_languages)
                     bot_messages.append(
                         _add_message(
@@ -6643,6 +6884,8 @@ def create_channel_room_message(
                 },
             )
             if runtime_state.get("sessionEnded") is True:
+                # 출력 없는 End에서도 생명주기 변경 전에 세대를 검증한다.
+                _fence_shared_room_write(db, room)
                 _archive_room_for_new_session(db, room, "end_session_immediately")
                 _write_channel_audit_log(
                     db,
@@ -6734,6 +6977,29 @@ def create_channel_room_message(
                     text=_runtime_message(default_messages, "system_error", DEFAULT_MESSAGE_FALLBACKS["system_error"]),
                 )
             )
+        if shared_turn is not None:
+            from app.services.room_turn import hold_room_turn_for_input, release_room_turn
+            if queue_event.status == "failed":
+                # 실패한 질문의 대기/변수를 다음 참가자가 이어받지 않는다.
+                previous = _as_dict(room.metadata_json)
+                fresh = _initial_runtime_state_for_version(bot, version, channel)
+                for key in ("__webchatAccess", "__roomTurn", "__clientEvents", "conversationHistory", "language", "runtimeEvents"):
+                    if key in previous:
+                        fresh[key] = previous[key]
+                fresh["dialogEnded"] = True
+                room.metadata_json = fresh
+                flag_modified(room, "metadata_json")
+                runtime_state_after = fresh
+                _set_queue_status(queue_event, "failed", receive_status=queue_event.receive_status,
+                    result_json=queue_event.result_json, error_message=queue_event.error_message)
+            _fence_shared_room_write(db, room)
+            db.flush()
+            waiting_input = bool(str(runtime_state_after.get("waitingNodeId") or "").strip())
+            if queue_event.status == "failed" or runtime_state_after.get("sessionEnded") is True or not waiting_input:
+                release_room_turn(db, room.id, shared_turn["actor_id"], shared_turn["generation"],
+                    "error" if queue_event.status == "failed" else "session_ended" if runtime_state_after.get("sessionEnded") is True else "dialog_ended")
+            else:
+                hold_room_turn_for_input(db, room.id, shared_turn["actor_id"], shared_turn["generation"])
         room.updated_at = datetime.now(timezone.utc)
         db.add(room)
         db.commit()
@@ -6762,6 +7028,7 @@ def create_channel_room_message(
                     "dialogEnded": runtime_state_after.get("dialogEnded") is True,
                     "sessionEnded": runtime_state_after.get("sessionEnded") is True,
                     "completionReason": runtime_completion_reason(runtime_state_after),
+                    "waitingNodeId": str(runtime_state_after.get("waitingNodeId") or "").strip() or None,
                 },
             },
         )
