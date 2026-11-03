@@ -11,14 +11,18 @@ from tests.integration.test_bot_persistence_regression import _request
 
 
 def test_second_bot_creation_is_rejected(regression_actor, db_session):
+    from tests.cga_alone.test_user_bot_license import limit
+    limit(db_session, regression_actor, 1)
     create_bot(BotCreateRequest(name="다온"), _request(), regression_actor, db_session)
     with pytest.raises(HTTPException) as denied:
         create_bot(BotCreateRequest(name="두 번째"), _request(), regression_actor, db_session)
-    assert denied.value.status_code == 409
+    assert denied.value.status_code == 403
     assert len(db_session.scalars(select(Bot).where(Bot.created_by == regression_actor.id, Bot.deleted_at.is_(None))).all()) == 1
 
 
 def test_initial_bot_name_is_display_and_call_name(regression_actor, db_session):
+    from tests.cga_alone.test_user_bot_license import limit
+    limit(db_session, regression_actor, 1)
     response = create_bot(BotCreateRequest(name="다온"), _request(), regression_actor, db_session)
     bot = db_session.get(Bot, UUID(response["data"]["id"]))
     assert response["data"]["name"] == bot.name == "다온"
@@ -26,6 +30,8 @@ def test_initial_bot_name_is_display_and_call_name(regression_actor, db_session)
 
 
 def test_copy_version_is_allowed(regression_actor, db_session):
+    from tests.cga_alone.test_user_bot_license import limit
+    limit(db_session, regression_actor, 1)
     response = create_bot(BotCreateRequest(name="다온"), _request(), regression_actor, db_session)
     bot_id = UUID(response["data"]["id"])
     version = db_session.scalar(select(BotVersion).where(BotVersion.bot_id == bot_id))
@@ -34,18 +40,19 @@ def test_copy_version_is_allowed(regression_actor, db_session):
     assert len(db_session.scalars(select(Bot).where(Bot.created_by == regression_actor.id)).all()) == 1
 
 
-def test_database_rejects_second_owned_bot(regression_actor, db_session):
-    from sqlalchemy.exc import IntegrityError
-    create_bot(BotCreateRequest(name="다온"), _request(), regression_actor, db_session)
-    with pytest.raises(IntegrityError):
-        with db_session.begin_nested():
-            db_session.add(Bot(organization_id=regression_actor.organization_id,
-                               group_id=regression_actor.group_id, created_by=regression_actor.id,
-                               name="직접 삽입 우회", data_json={}))
-            db_session.flush()
+def test_database_index_does_not_hardcode_one_bot(regression_actor, db_session):
+    from tests.cga_alone.test_user_bot_license import limit
+    from sqlalchemy import inspect
+    limit(db_session, regression_actor, 2)
+    create_bot(BotCreateRequest(name="첫번째"), _request(), regression_actor, db_session)
+    create_bot(BotCreateRequest(name="두번째"), _request(), regression_actor, db_session)
+    indexes={item['name']:item for item in inspect(db_session.bind).get_indexes('bots')}
+    assert 'uq_bots_live_creator' not in indexes
+    assert not indexes['idx_bots_live_creator']['unique']
 
 
-def test_parallel_creation_has_one_winner(test_engine, migrated_test_database):
+@pytest.mark.parametrize("quota", [1, 2])
+def test_parallel_creation_respects_licensed_quota(test_engine, migrated_test_database, quota):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
     from sqlalchemy import delete, update
@@ -55,7 +62,10 @@ def test_parallel_creation_has_one_winner(test_engine, migrated_test_database):
     with Session(test_engine, expire_on_commit=False) as session:
         actor = actor_fixture.__wrapped__(session, migrated_test_database)
         actor_id, org_id, group_id = actor.id, actor.organization_id, actor.group_id
-    barrier = Barrier(2)
+        from tests.cga_alone.test_user_bot_license import limit
+        limit(session, actor, quota)
+        session.commit()
+    barrier = Barrier(quota + 1)
     def create_one(number):
         with Session(test_engine, expire_on_commit=False) as session:
             user = session.get(User, actor_id)
@@ -67,12 +77,12 @@ def test_parallel_creation_has_one_winner(test_engine, migrated_test_database):
                 session.rollback()
                 return error.status_code
     try:
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(executor.map(create_one, range(2)))
+        with ThreadPoolExecutor(max_workers=quota + 1) as executor:
+            results = list(executor.map(create_one, range(quota + 1)))
         with Session(test_engine) as session:
             bots = session.scalars(select(Bot).where(Bot.created_by == actor_id, Bot.deleted_at.is_(None))).all()
-            assert len(bots) == 1
-            assert sorted(results) == [200, 409]
+            assert len(bots) == quota
+            assert sorted(results) == [200] * quota + [403]
     finally:
         with Session(test_engine) as session:
             ids = session.scalars(select(Bot.id).where(Bot.created_by == actor_id)).all()
@@ -88,6 +98,8 @@ def test_parallel_creation_has_one_winner(test_engine, migrated_test_database):
 
 
 def test_import_cannot_create_second_bot(regression_actor, db_session):
+    from tests.cga_alone.test_user_bot_license import limit
+    limit(db_session, regression_actor, 1)
     from app.api.routes.bots import export_aidot_bot_package, import_aidot_bot_package
     first = create_bot(BotCreateRequest(name="다온"), _request(), regression_actor, db_session)
     bot_id = UUID(first["data"]["id"])
@@ -97,10 +109,12 @@ def test_import_cannot_create_second_bot(regression_actor, db_session):
     assert len(db_session.scalars(select(Bot).where(Bot.created_by == regression_actor.id, Bot.deleted_at.is_(None))).all()) == 1
     with pytest.raises(HTTPException) as denied:
         create_bot(BotCreateRequest(name="가져오기 이후 새 봇"), _request(), regression_actor, db_session)
-    assert denied.value.status_code == 409
+    assert denied.value.status_code == 403
 
 
 def test_soft_deleted_bot_can_be_recreated(regression_actor, db_session):
+    from tests.cga_alone.test_user_bot_license import limit
+    limit(db_session, regression_actor, 1)
     from app.api.routes.bots import delete_bot
     first = create_bot(BotCreateRequest(name="삭제 전"), _request(), regression_actor, db_session)
     delete_bot(UUID(first["data"]["id"]), _request(), regression_actor, db_session)
@@ -110,6 +124,8 @@ def test_soft_deleted_bot_can_be_recreated(regression_actor, db_session):
 
 
 def test_unowned_system_bots_do_not_consume_creator_slot(regression_actor, db_session):
+    from tests.cga_alone.test_user_bot_license import limit
+    limit(db_session, regression_actor, 1)
     for name in ["system-one", "system-two"]:
         db_session.add(Bot(organization_id=regression_actor.organization_id,
                            group_id=regression_actor.group_id, created_by=None, name=name, data_json={}))

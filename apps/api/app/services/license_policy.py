@@ -8,14 +8,14 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import AdminLicense, Bot, BotVersion, User
+from app.models import AdminLicense, Bot, BotVersion, Organization, User
 
 LicenseResource = Literal["users", "bots", "apis"]
 _UNSET = object()
 
 LICENSE_RESOURCE_LABELS: dict[LicenseResource, str] = {
     "users": "사용자",
-    "bots": "봇",
+    "bots": "사용자별 봇",
     "apis": "API",
 }
 
@@ -153,7 +153,7 @@ def count_registered_apis_with_version_override(
                 api_keys.add(key)
     return len(api_keys)
 
-def get_license_usage_counts(db: Session, organization_id: UUID) -> dict[LicenseResource, int]:
+def get_license_usage_counts(db: Session, organization_id: UUID, *, creator_id: UUID | None = None) -> dict[LicenseResource, int]:
     return {
         "users": int(
             db.scalar(
@@ -170,6 +170,7 @@ def get_license_usage_counts(db: Session, organization_id: UUID) -> dict[License
                 select(func.count()).select_from(Bot).where(
                     Bot.organization_id == organization_id,
                     Bot.deleted_at.is_(None),
+                    *([Bot.created_by == creator_id] if creator_id is not None else []),
                 )
             )
             or 0
@@ -213,12 +214,58 @@ def get_license_warnings(
     return warnings
 
 
+def lock_license_scope(db: Session, organization_id: UUID) -> None:
+    """생성과 라이선스 교체가 같은 조직 장벽을 사용한다. commit은 호출자가 담당한다."""
+    if db.scalar(select(Organization.id).where(Organization.id == organization_id).with_for_update()) is None:
+        raise HTTPException(status_code=404, detail="조직을 찾을 수 없습니다.")
+
+
+def get_bot_creation_policy(db: Session, organization_id: UUID, creator_id: UUID) -> dict:
+    used = int(db.scalar(select(func.count()).select_from(Bot).where(
+        Bot.organization_id == organization_id, Bot.created_by == creator_id, Bot.deleted_at.is_(None)
+    )) or 0)
+    record = get_current_license(db, organization_id)
+    payload = _license_payload(record)
+    value = (payload.get("limits") or {}).get("bots") if payload and isinstance(payload.get("limits"), dict) else None
+    limit = value if type(value) is int and value >= 0 else None
+    reason = "available"
+    if record is None or payload is None:
+        reason = "license_missing"
+    else:
+        try:
+            expires_at = parse_license_date(payload.get("expires_at"))
+        except HTTPException:
+            reason = "license_invalid"
+        else:
+            if expires_at is not None and expires_at < date.today():
+                reason = "license_expired"
+            elif limit is None:
+                reason = "bot_limit_invalid"
+            elif used >= limit:
+                reason = "quota_reached"
+    return {"limit": limit, "used": used, "remaining": max(limit-used, 0) if limit is not None else None,
+            "allowed": reason == "available", "reason": reason}
+
+
 def assert_license_allows_creation(
     db: Session,
     organization_id: UUID,
     resource: LicenseResource,
     quantity: int = 1,
+    *, creator_id: UUID | None = None,
 ) -> None:
+    if resource == "bots":
+        if creator_id is None:
+            raise HTTPException(status_code=403, detail="인증된 제작자 정보가 필요합니다.")
+        policy = get_bot_creation_policy(db, organization_id, creator_id)
+        if not policy["allowed"] or policy["remaining"] < max(quantity, 1):
+            messages = {"license_missing": "라이선스를 적용한 후 봇을 생성할 수 있습니다.",
+                        "license_expired": "라이선스가 만료되어 신규 봇 생성이 제한됩니다.",
+                        "bot_limit_invalid": "사용자별 봇 라이선스 한도를 확인해주세요.",
+                        "license_invalid": "라이선스 정보를 확인해주세요."}
+            raise HTTPException(status_code=403, detail=messages.get(policy["reason"],
+                f"사용자별 봇 라이선스 생성 한도에 도달했습니다. ({policy['used']}/{policy['limit']})"))
+        return
     record = get_current_license(db, organization_id)
     payload = _license_payload(record)
     label = LICENSE_RESOURCE_LABELS[resource]

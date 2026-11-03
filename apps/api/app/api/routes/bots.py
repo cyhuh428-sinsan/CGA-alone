@@ -66,7 +66,8 @@ from app.schemas.bot import (
     VersionRetrainingUpdateRequest,
     VersionUpdateRequest,
 )
-from app.services.license_policy import assert_license_allows_creation, count_registered_apis, count_registered_apis_with_version_override
+from app.schemas.bot import BotCreationPolicyResponse
+from app.services.license_policy import get_bot_creation_policy as read_bot_creation_policy, lock_license_scope, assert_license_allows_creation, count_registered_apis, count_registered_apis_with_version_override
 from app.services.bot_ai_policy import training_block_reason
 from app.services.aidot_package_compatibility import (
     aidot_bot_package_to_version_document,
@@ -4405,6 +4406,16 @@ def list_bots(
     )
 
 
+@router.get("/creation-policy")
+def get_bot_creation_policy(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    policy = read_bot_creation_policy(db, current_user.organization_id, current_user.id)
+    return success_response(request, BotCreationPolicyResponse(**policy).model_dump())
+
+
 @router.post("")
 def create_bot(
     payload: BotCreateRequest,
@@ -4417,12 +4428,8 @@ def create_bot(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="그룹이 지정된 사용자만 봇을 생성할 수 있습니다.",
         )
-    existing_bot = db.scalar(
-        select(Bot.id).where(Bot.created_by == current_user.id, Bot.deleted_at.is_(None)).limit(1)
-    )
-    if existing_bot is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="사용자당 봇은 하나만 생성할 수 있습니다.")
-    assert_license_allows_creation(db, current_user.organization_id, "bots")
+    lock_license_scope(db, current_user.organization_id)
+    assert_license_allows_creation(db, current_user.organization_id, "bots", creator_id=current_user.id)
     bot_id = uuid4()
     bot = Bot(
         id=bot_id,
@@ -4435,16 +4442,7 @@ def create_bot(
         created_by=current_user.id,
     )
     db.add(bot)
-    try:
-        db.flush()
-    except IntegrityError as error:
-        if getattr(getattr(error.orig, "diag", None), "constraint_name", None) != "uq_bots_live_creator":
-            raise
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="사용자당 봇은 하나만 생성할 수 있습니다.",
-        ) from error
+    db.flush()
     profile_image_url = _store_profile_image(bot.id, payload.profile_image_data)
     if profile_image_url:
         bot_data = dict(bot.data_json or {})

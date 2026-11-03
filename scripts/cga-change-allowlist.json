@@ -62,7 +62,7 @@
   {
     "path": "apps/api/app/api/routes/bots.py",
     "stage": "S02/P01/P03/S03/P04",
-    "reason": "S02 한 봇·소유 격리·허브 원문 비노출 및 승인 P01 샘플 버전 mutation/worker fence·닫힌 기록 보존 최소 연결; P03 열린 지속 방의 자동 운영버전 종료 제외; P03 실제JWT room/turn/ACK·고정버전 text Talk/End·예산계층·전용worker와 새샘플버전 사전guard; 승인된 S03 버전 AI 모듈 참조 저장 및 운영 지정 전 같은 버전 모듈 검사; P04 기존 worker에 만료 persistent operation의 결과확인 연결; 일반채널/살아있는 lease 보존"
+    "reason": "S02 한 봇·소유 격리·허브 원문 비노출 및 승인 P01 샘플 버전 mutation/worker fence·닫힌 기록 보존 최소 연결; P03 열린 지속 방의 자동 운영버전 종료 제외; P03 실제JWT room/turn/ACK·고정버전 text Talk/End·예산계층·전용worker와 새샘플버전 사전guard; 승인된 S03 버전 AI 모듈 참조 저장 및 운영 지정 전 같은 버전 모듈 검사; P04 기존 worker에 만료 persistent operation의 결과확인 연결; 일반채널/살아있는 lease 보존; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/api/app/api/routes/hubs.py",
@@ -72,7 +72,7 @@
   {
     "path": "apps/api/app/models/studio.py",
     "stage": "S02",
-    "reason": "승인 R01/R02/R26/R27: 제작자별 봇 하나·소유 격리·기존 name 유지·허브 생성 UI 비표시. 허브 API/runtime·공용 그룹 API 유지"
+    "reason": "승인 R01/R02/R26/R27: 제작자별 봇 하나·소유 격리·기존 name 유지·허브 생성 UI 비표시. 허브 API/runtime·공용 그룹 API 유지; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/api/alembic/versions/20261029_0028_one_bot_per_creator.py",
@@ -87,7 +87,7 @@
   {
     "path": "apps/api/tests/cga_alone/test_one_bot_creation.py",
     "stage": "S02",
-    "reason": "승인 R01/R02/R26/R27: 제작자별 봇 하나·소유 격리·기존 name 유지·허브 생성 UI 비표시. 허브 API/runtime·공용 그룹 API 유지"
+    "reason": "승인 R01/R02/R26/R27: 제작자별 봇 하나·소유 격리·기존 name 유지·허브 생성 UI 비표시. 허브 API/runtime·공용 그룹 API 유지; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/api/tests/cga_alone/test_owner_scope.py",
@@ -102,7 +102,7 @@
   {
     "path": "apps/web/components/bot-create-dialog.tsx",
     "stage": "S02",
-    "reason": "승인 R01/R02/R26/R27: 제작자별 봇 하나·소유 격리·기존 name 유지·허브 생성 UI 비표시. 허브 API/runtime·공용 그룹 API 유지"
+    "reason": "승인 R01/R02/R26/R27: 제작자별 봇 하나·소유 격리·기존 name 유지·허브 생성 UI 비표시. 허브 API/runtime·공용 그룹 API 유지; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/web/components/bots-workspace.tsx",
@@ -142,7 +142,7 @@
   {
     "path": "apps/web/lib/studio-bots-api.ts",
     "stage": "S02/S03/S04",
-    "reason": "2026-10-29 신산님 승인: 본인 허브 한정 최소 후보 조회의 전용 DTO/호출 연결; 승인된 S03 기존 PATCH 설정 payload에 모듈 ID 전달; 승인 S04 기존 PATCH의 결과 매핑 타입 전달"
+    "reason": "2026-10-29 신산님 승인: 본인 허브 한정 최소 후보 조회의 전용 DTO/호출 연결; 승인된 S03 기존 PATCH 설정 payload에 모듈 ID 전달; 승인 S04 기존 PATCH의 결과 매핑 타입 전달; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/web/components/bot-hub-home.tsx",
@@ -267,7 +267,7 @@
   {
     "path": "apps/api/app/schemas/bot.py",
     "stage": "S03/S04",
-    "reason": "승인된 S03 secondary_llm.module_id를 기존 BotUpdate/버전 AI 저장 경로에 전달; 사용자 추가 승인 S04 secondary_llm.outcome 변수/답변성공값/미인식값 저장 전달"
+    "reason": "승인된 S03 secondary_llm.module_id를 기존 BotUpdate/버전 AI 저장 경로에 전달; 사용자 추가 승인 S04 secondary_llm.outcome 변수/답변성공값/미인식값 저장 전달; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/api/app/services/bot_ai_policy.py",
@@ -407,7 +407,7 @@
   {
     "path": "apps/api/app/api/routes/admin.py",
     "stage": "S08·S09·S10 / C01/P04",
-    "reason": "직접승인 exact추가경로: SLACK 지원renderer 검증만 보완; S09 사용자 직접 승인: 승인 Discord 6가지 renderer 검증만 추가; S10 직접 승인: 승인 Telegram 6renderer 검증만 추가; S11 사용자 직접 승인: google-chat/GOOGLE_CHAT·공간/thread·6종cardsV2/원본메시지선택복원과 기존 원장/관리 renderer 소비만 최소 연결, 공개HTTP필드/schema/Secret/배포 없음 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만 / S13 직접승인 기존 기본 채널·템플릿 초기화의 조직 row 잠금 한곳만 추가; C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호; P04 버전지식불변: 실제경합 RED2로 재현한 등록샘플 Admin backfill stale 파생자료 덮어쓰기만 버전장벽/최신재조회로보완; 기존Admin권한/응답/일반버전유지"
+    "reason": "직접승인 exact추가경로: SLACK 지원renderer 검증만 보완; S09 사용자 직접 승인: 승인 Discord 6가지 renderer 검증만 추가; S10 직접 승인: 승인 Telegram 6renderer 검증만 추가; S11 사용자 직접 승인: google-chat/GOOGLE_CHAT·공간/thread·6종cardsV2/원본메시지선택복원과 기존 원장/관리 renderer 소비만 최소 연결, 공개HTTP필드/schema/Secret/배포 없음 / S12 직접 승인 LINE 최소 연결·6표현·postback 복원·일회용 응답 토큰 guard 및 해당 회귀만 / S13 직접승인 기존 기본 채널·템플릿 초기화의 조직 row 잠금 한곳만 추가; C01 승인된 복수 연결 관리: 자식 설정·암호화·관리자 API/기존 화면 연결 및 직접 회귀 보호; P04 버전지식불변: 실제경합 RED2로 재현한 등록샘플 Admin backfill stale 파생자료 덮어쓰기만 버전장벽/최신재조회로보완; 기존Admin권한/응답/일반버전유지; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/web/app/admin/templates/page.tsx",
@@ -472,7 +472,7 @@
   {
     "path": "docs/manual/CGA_ALONE_DEVELOPMENT_GUIDE.md",
     "stage": "S13",
-    "reason": "S13 기승인 CGA-alone 변경 기능 최소 사용 방법·내부/외부 검증 구분·P04보류 보충, 원본PDF/타언어/기존기능 재작성 없음"
+    "reason": "S13 기승인 CGA-alone 변경 기능 최소 사용 방법·내부/외부 검증 구분·P04보류 보충, 원본PDF/타언어/기존기능 재작성 없음; L01 사용자별 봇 라이선스 동작·집계·서명 적용 안내 갱신"
   },
   {
     "path": "apps/web/components/simulator-analysis-isolation.test.mjs",
@@ -842,7 +842,7 @@
   {
     "path": "apps/web/public/manuals/cga-alone-guide-ko.html",
     "stage": "HELP_MANUALS",
-    "reason": "신산님 직접 요청: 기존 도움말/3 PDF·체험 보존, CGA-alone 보충 매뉴얼 2종 웹 열람과 원문 일치 검증"
+    "reason": "신산님 직접 요청: 기존 도움말/3 PDF·체험 보존, CGA-alone 보충 매뉴얼 2종 웹 열람과 원문 일치 검증; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/web/public/manuals/channel-connections-ko.html",
@@ -852,12 +852,12 @@
   {
     "path": "apps/web/components/bot-create-limit.test.mjs",
     "stage": "BOT_CREATE_LIMIT",
-    "reason": "신산님 직접 요청: 기존봇 자동이동 제거·생성화면 제한안내 및 기존 생성차단 회귀시험"
+    "reason": "신산님 직접 요청: 기존봇 자동이동 제거·생성화면 제한안내 및 기존 생성차단 회귀시험; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "apps/web/lib/i18n/bot-create.ts",
     "stage": "BOT_CREATE_LIMIT",
-    "reason": "신산님 승인: 생성 화면을 유지하며 사용자당1봇 추가생성 제한 사유를 기존7언어로 안내"
+    "reason": "신산님 승인: 생성 화면을 유지하며 사용자당1봇 추가생성 제한 사유를 기존7언어로 안내; L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   },
   {
     "path": "README.de.md",
@@ -903,5 +903,35 @@
     "path": "apps/api/tests/cga_alone/persistent_llm_qa_server.py",
     "stage": "P04",
     "reason": "승인된 P04 정식WSL 대역화면/실API재시작검증용 테스트전용실행기: 기존app/JWT·전용QA만·서비스DB/admin role거부·파일영속대역/소유범위정리; 일반startup/Compose/실Provider 불변"
+  },
+  {
+    "path": "apps/api/app/services/license_policy.py",
+    "stage": "L01",
+    "reason": "L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
+  },
+  {
+    "path": "apps/api/alembic/versions/20261103_0033_user_bot_license.py",
+    "stage": "L01",
+    "reason": "L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
+  },
+  {
+    "path": "apps/api/tests/cga_alone/test_user_bot_license.py",
+    "stage": "L01",
+    "reason": "L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
+  },
+  {
+    "path": "apps/api/tests/integration/test_bot_persistence_regression.py",
+    "stage": "L01",
+    "reason": "L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
+  },
+  {
+    "path": "apps/web/app/admin/license/page.tsx",
+    "stage": "L01",
+    "reason": "L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
+  },
+  {
+    "path": "apps/web/lib/i18n/admin-license.ts",
+    "stage": "L01",
+    "reason": "L01 승인: 사용자별 봇 라이선스 집계·원자적 한도·최소 읽기 계약·화면/문서 및 회귀 검증"
   }
 ]

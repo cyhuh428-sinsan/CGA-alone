@@ -74,14 +74,14 @@ export default function AdminLicensePage() {
       (licenseStatus?.usage ?? []).map((item) => ({
         key: item.key,
         cells: [
-          item.label,
+          item.key === "bots" ? copy.perUserBots : item.label,
           displayNumber(item.limit, locale),
           displayNumber(item.used, locale),
           displayNumber(item.remaining, locale),
           item.expires_at ?? "-",
         ],
       })),
-    [licenseStatus, locale],
+    [licenseStatus, locale, copy],
   );
 
   const currentLicense = licenseStatus?.license;
@@ -121,6 +121,7 @@ export default function AdminLicensePage() {
         loading={loading}
       />
 
+      <p className="admin-page__description">{copy.perUserBotsHelp}</p>
       <section className="admin-page admin-license-summary" aria-label={copy.licenseDetails}>
         <h2>{copy.licenseInfo}</h2>
         <div className="data-grid data-grid--admin" style={{ "--data-grid-template": "1fr 1fr 1fr 1fr" } as CSSProperties}>
