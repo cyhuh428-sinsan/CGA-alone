@@ -844,6 +844,14 @@ export async function forceReleaseEditLock(token: string, lockId: string) {
   );
 }
 
+export type BotCreationPolicy = {
+  limit: number | null; used: number; remaining: number | null; allowed: boolean; reason: string;
+};
+
+export async function fetchStudioBotCreationPolicy(token: string) {
+  return apiRequest<BotCreationPolicy>("/api/v1/bots/creation-policy", {}, token);
+}
+
 export async function fetchStudioBots(token: string, includeDocument = false) {
   const cacheKey = `${tokenFingerprint(token)}:${includeDocument ? "full" : "summary"}`;
   const cached = getCachedStudioBots(token);

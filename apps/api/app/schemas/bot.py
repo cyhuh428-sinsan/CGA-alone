@@ -273,3 +273,11 @@ class MlIntentConfigureRequest(BaseModel):
     target_count: int = Field(default=50, ge=1, le=100)
     target_count_policy: Literal["minimize", "near", "exact"] = "near"
     seed_intents: list[MlSeedIntent] = Field(default_factory=list, max_length=100)
+
+
+class BotCreationPolicyResponse(BaseModel):
+    limit: int | None
+    used: int
+    remaining: int | None
+    allowed: bool
+    reason: str

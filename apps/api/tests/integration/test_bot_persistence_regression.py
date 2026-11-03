@@ -100,7 +100,7 @@ def regression_actor(db_session, migrated_test_database):
         status="active",
         license_text="regression-test-license",
         signature_value="regression-test-signature",
-        payload_json={"expires_at": (date.today() + timedelta(days=30)).isoformat()},
+        payload_json={"expires_at": (date.today() + timedelta(days=30)).isoformat(), "limits": {"users": 100, "bots": 100, "apis": 100}},
         applied_by=user.id,
     )
     db_session.add(license_record)

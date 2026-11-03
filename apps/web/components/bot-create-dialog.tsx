@@ -30,7 +30,7 @@ import {
   type NluModelKey,
   type NluType,
 } from "@/lib/nlu-options";
-import { createStudioBot, fetchStudioBots } from "@/lib/studio-bots-api";
+import { createStudioBot, fetchStudioBotCreationPolicy, type BotCreationPolicy } from "@/lib/studio-bots-api";
 import { type VectorConnectionConfig, type VectorConnectionsConfig } from "@/lib/bot-settings";
 import { normalizeSupportedLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/lib/language";
 import { translateAiOptionText } from "@/lib/i18n/ai-options";
@@ -106,26 +106,23 @@ export function BotCreateDialog() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [creationAllowed, setCreationAllowed] = useState(false);
-  const [hasExistingBot, setHasExistingBot] = useState(false);
+  const [creationPolicy, setCreationPolicy] = useState<BotCreationPolicy | null>(null);
 
   useEffect(() => {
     let disposed = false;
     setCreationAllowed(false);
-    setHasExistingBot(false);
+    setCreationPolicy(null);
     setErrorMessage("");
     const session = loadAuthSession();
     if (!session) {
       setErrorMessage(copy.loginRequired);
       return;
     }
-    fetchStudioBots(session.access_token, true)
-      .then((bots) => {
+    fetchStudioBotCreationPolicy(session.access_token)
+      .then((policy) => {
         if (disposed) return;
-        if (bots.length > 0) {
-          setHasExistingBot(true);
-          return;
-        }
-        setCreationAllowed(true);
+        setCreationPolicy(policy);
+        setCreationAllowed(policy.allowed);
       })
       .catch((error) => {
         if (!disposed) setErrorMessage(error instanceof Error ? error.message : copy.createError);
@@ -269,7 +266,7 @@ export function BotCreateDialog() {
             <div><dt>LLM</dt><dd>{usesLlmEngine ? llmModel : "-"}</dd></div>
             <div><dt>{copy.version}</dt><dd>v1</dd></div>
           </dl>
-          <p id="bot-creation-notice" role="status">{hasExistingBot ? copy.singleBotLimit : translateAiOptionText(uiLanguage, "Next: configure using the selected input structure.")}</p>
+          <p id="bot-creation-notice" role="status">{creationPolicy ? <>{formatBotCreateText(copy.botLicenseUsage, {limit: String(creationPolicy.limit ?? "-"), used: String(creationPolicy.used), remaining: String(creationPolicy.remaining ?? "-")})}{!creationPolicy.allowed ? ` ${creationPolicy.reason === "quota_reached" ? copy.licenseLimitReached : copy.licenseUnavailable}` : ""}</> : translateAiOptionText(uiLanguage, "Next: configure using the selected input structure.")}</p>
         </aside>
         <div className="bot-create-dialog__field cga-bot-create-page__field--type">
           <span className="bot-create-dialog__label">{copy.botType} <em>*</em></span>
@@ -716,7 +713,7 @@ export function BotCreateDialog() {
           type="button"
           className="bot-create-dialog__primary"
           disabled={isSubmitting || !creationAllowed}
-          aria-describedby={hasExistingBot ? "bot-creation-notice" : undefined}
+          aria-describedby="bot-creation-notice"
           onClick={handleSubmit}
         >
           {isSubmitting ? copy.creating : copy.confirm}

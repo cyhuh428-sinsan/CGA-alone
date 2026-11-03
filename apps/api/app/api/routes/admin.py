@@ -34,7 +34,7 @@ from app.core.version_storage import (
 )
 from app.models import AdminChannel, ChannelConnection, AdminDefaultMessage, AdminLicense, AdminTemplate, AuditLog, Bot, BotVersion, ChannelMessage, ChannelQueueEvent, ChannelRoom, CommonVariable, EditLock, Group, Organization, Role, SignupRequest, User, UserRole, VersionDialogAsset, VersionDialogFlowGraph
 from app.services.version_pins import lock_registered_projection
-from app.services.license_policy import assert_license_allows_creation, get_license_usage_counts, get_license_warnings
+from app.services.license_policy import lock_license_scope, assert_license_allows_creation, get_license_usage_counts, get_license_warnings
 from app.services.nlu.deep_learning_lite import get_ml_acceleration_status
 from app.services.scenario_validation import scenario_validation_from_version
 from app.services.default_message_catalog import DEFAULT_MESSAGE_CATALOGS
@@ -979,7 +979,7 @@ LICENSE_FORMAT = "cga-license"
 LICENSE_SIGNATURE_ALGORITHM = "RS256"
 LICENSE_USAGE_DEFINITIONS = [
     ("users", "사용자"),
-    ("bots", "봇"),
+    ("bots", "사용자별 봇"),
     ("apis", "API"),
 ]
 
@@ -1171,8 +1171,8 @@ def _license_effective_status(record: AdminLicense) -> str:
     return record.status
 
 
-def _serialize_license_status(db: Session, organization: Organization, record: AdminLicense | None) -> AdminLicenseStatusResponse:
-    usage_counts = get_license_usage_counts(db, organization.id)
+def _serialize_license_status(db: Session, organization: Organization, record: AdminLicense | None, *, creator_id: UUID | None = None) -> AdminLicenseStatusResponse:
+    usage_counts = get_license_usage_counts(db, organization.id, creator_id=creator_id)
     warnings = get_license_warnings(
         db,
         organization.id,
@@ -6614,7 +6614,7 @@ def get_admin_license_status(
 ) -> dict[str, object]:
     _require_operations_view_user(db, current_user)
     organization = _get_default_organization(db)
-    response = _serialize_license_status(db, organization, _current_admin_license(db, organization.id))
+    response = _serialize_license_status(db, organization, _current_admin_license(db, organization.id), creator_id=current_user.id)
     return success_response(request, response.model_dump(mode="json"))
 
 
@@ -6627,6 +6627,7 @@ def apply_admin_license(
 ) -> dict[str, object]:
     _require_admin_user(db, current_user)
     organization = _get_default_organization(db)
+    lock_license_scope(db, organization.id)
     license_doc = _verify_license_text(payload.license_text)
     license_payload = license_doc["payload"]
     signature = license_doc["signature"]
@@ -6677,7 +6678,7 @@ def apply_admin_license(
 
     db.commit()
     db.refresh(existing)
-    response = _serialize_license_status(db, organization, existing)
+    response = _serialize_license_status(db, organization, existing, creator_id=current_user.id)
     return success_response(request, response.model_dump(mode="json"))
 @router.get("/common-variables")
 def list_common_variables(
